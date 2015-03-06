@@ -1,13 +1,15 @@
 from setuptools import setup, find_packages
 
+
 setup(
     name='msync',
     version='0.1',
     description='django-orm and mongoengine synchronizer',
+    url='https://github.com/eqwile/msync',
     author='readly',
     license='MIT',
     keywords='django orm mongo mongoengine sync',
-    packages=find_packages(),
+    packages=['msync'],
     install_requires=['django', 'mongoengine'],
     classifiers=[
         'Development Status :: 3 - Alpha',
