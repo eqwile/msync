@@ -69,7 +69,6 @@ class SignalConnector(object):
             document = self.parent_sync_cls.create_document(instance, with_embedded=created)
             self.document_search.update_documents(None, instance, document, new=created)
 
-
     def _post_delete_handler(self, instance, using, **kwargs):
         print
         print 'REMOVE'
