@@ -11,11 +11,30 @@ class QSBase(object):
         self._path = None
 
     def get_path(self):
+        if self._path is None:
+            self._path = self._get_path()
+        return self._path
+
+    def _get_path(self):
         raise NotImplementedError()
 
+    def __or__(self, other):
+        self.union(other)
+
+    def union(self, other):
+        path = self.get_path()
+        other_path = other.get_path()
+        keys = set(path.keys()) + set(other_path.keys())
+        return {key: self._combine(path.get(key), other_path.get(key)) for key in keys}
+
+    def _combine(self, v1, v2):
+        if v2 is None:
+            return v1
+        else:
+            return v2
 
 class QSUpdate(QSBase):
-    def get_path(self):
+    def _get_path(self):
         sfield_path = self._get_sfield_path()
         return self._build_path_of_simple_sfields(sfield_path)
 
@@ -43,7 +62,7 @@ class QSUpdateDependentField(QSBase):
         self._instance = instance
         super(QSUpdateDependentField, self).__init__(**kwargs)
 
-    def get_path(self):
+    def _get_path(self):
         field_values = self._get_field_values()
         sfield_path = self._get_sfield_path()
         op = self._get_op()
@@ -69,7 +88,7 @@ class QSClear(QSUpdateDependentField):
 
 
 class QSCreate(QSBase):
-    def get_path(self):
+    def _get_path(self):
         sfield_path = self._get_sfield_path()
         op = self._sfield.update_operation(new=True)
         return {op + self.delim + sfield_path: self._document}
@@ -84,6 +103,6 @@ class QSDelete(QSBase):
         self._pk = pk
         super(QSDelete, self).__init__(**kwargs)
 
-    def get_path(self):
+    def _get_path(self):
         op = self._sfield.remove_operation()
         return {op + self.delim + k: v for k, v in self._pk.items()}

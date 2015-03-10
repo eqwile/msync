@@ -52,7 +52,7 @@ class SignalConnector(object):
         # TODO: maybe merge updating
         nested_sfields = self.nested_model_sfields_dict[instance.__class__]
         for sfield in nested_sfields:
-            sync_cls = sfield.get_nested_sync_cls() if sfield.is_nested() else sfield.sync_cls
+            sync_cls = sfield.get_nested_sync_cls()
             document = sync_cls.create_document(instance, with_embedded=created)
             self.document_search.update_documents(sfield, instance, document, new=created)
 
