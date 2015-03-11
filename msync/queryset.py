@@ -19,7 +19,7 @@ class QSBase(object):
         return self._path
 
     def _get_path(self):
-        raise {}
+        return {}
 
     def __or__(self, other):
         self.union(other)
