@@ -208,7 +208,6 @@ class Options(object):
             d[sf.get_depends_on_model()].append(sf)
         return d
 
-    # TODO: rename that method with stupid name
     def get_simple_sfields(self):
         return [sfield for sfield in self.sfields if not sfield.is_nested() and not sfield.is_depens_on()]
 
