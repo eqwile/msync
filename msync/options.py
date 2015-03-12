@@ -241,6 +241,15 @@ class SyncTree(object):
     def get_sfield_path(self, sfield):
         return self._get_sfield_path(self._tree, sfield)
 
+    def pr(self):
+        for k in self._tree:
+            self._pr(k, self._tree[k], 0)
+
+    def _pr(self, name, tree, offset):
+        print '%s%s' % (' ' * offset, name)
+        for k in tree:
+            self._pr(k, tree[k], offset + 4)
+
     def _get_all_sfields(self, all_sfields, tree):
         for sf in tree:
             all_sfields.append(sf)

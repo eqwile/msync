@@ -74,7 +74,7 @@ class BaseField(object):
         return self.mfield
 
     def __str__(self):
-        return '%s.%s sfield' % (self.sync_cls.__name__, self.name)
+        return '%s.%s' % (self.sync_cls.__name__, self.name)
 
 
 class SyncField(BaseField):
