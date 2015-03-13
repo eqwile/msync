@@ -150,7 +150,7 @@ class BatchQuery(object):
     def __enter__(self):
         self._qs_collection.clear()
 
-    def __exit__(self):
+    def __exit__(self, t, value, traceback):
         self.run()
 
     def run(self):
