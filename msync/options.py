@@ -63,7 +63,6 @@ class Options(object):
             self.collection_settings = {key: getattr(self._meta_cls, key)
                                         for key in self._collection_setting_keys
                                         if hasattr(self._meta_cls, key)}
-
         return self.collection_settings
 
     def _add_model_fields(self):
