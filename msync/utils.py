@@ -14,6 +14,10 @@ def isfunc(obj):
     return isinstance(obj, (types.FunctionType, types.MethodType))
 
 
+def islist(obj):
+    return isinstance(obj, (list, tuple))
+
+
 def to_dict(document):
     remove_fields = ['_cls']
     m = document.to_mongo()

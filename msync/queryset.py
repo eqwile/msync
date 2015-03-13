@@ -1,6 +1,7 @@
 import operator
 from collections import defaultdict
 from .factories import DocumentFactory
+from .utils import islist
 
 
 class QSBase(object):
@@ -26,9 +27,26 @@ class QSBase(object):
 
     def union(self, other):
         path = self.get_path()
-        path.update(other.get_path())
-        return QSBase(sync_cls=self._sync_cls, document=self._document, sfield=self._sfield, path=path)
+        other_path = other.get_path()
+        keys = set(path.keys()) | set(other_path.keys())
+        new_path = dict([self._combine(key, path.get(key), other_path.get(key)) for key in keys])
+        print new_path
+        return QSBase(sync_cls=self._sync_cls, document=self._document, sfield=self._sfield, path=new_path)
 
+    def _combine(self, key, v1, v2):
+        if v1 is None:
+            return (key, v2)
+        elif v2 is None:
+            return (key, v1)
+        elif islist(v1):
+            v1.append(v2)
+            return ('push_all', v1)
+        elif islist(v2):
+            v2.append(v1)
+            return ('push_all', v2)
+        else:
+            return ('push_all', [v1, v2])
+            
 
 class QSPk(QSBase):
     def __init__(self, pk=None, **kwargs):
@@ -149,20 +167,29 @@ class BatchQuery(object):
 
     def __enter__(self):
         self._qs_collection.clear()
+        return self
 
     def __exit__(self, t, value, traceback):
+        print
         self.run()
 
     def run(self):
         for pk_path, qss in self._qs_collection.items():
             qs = reduce(operator.or_, qss)
-            self._sync_cls._meta.document.objects.filter(**dict(pk_path)).update(**qs.get_path())
+            qs_path = qs.get_path()
+            pk_path = dict(pk_path)
+            print '{}.filter({}).update({})'.format(self._sync_cls, pk_path, qs_path)
+            self._sync_cls._meta.document.objects.filter(**pk_path).update(**qs_path)
 
     def __setitem__(self, key, qs):
+        key = self._get_key(key)
+        self._qs_collection[key].append(qs)
+
+    def _get_key(self, k):
         try:
-            ins, sfield = key
+            ins, sfield = k
         except TypeError:
-            ins, sfield = key, None
+            ins, sfield = k, None
 
         pk_path = QSPk(sync_cls=self._sync_cls, instance=ins, sfield=sfield).get_path()
-        self._qs_collection[frozenset(pk_path.items())].append(qs)
+        return frozenset(pk_path.items())

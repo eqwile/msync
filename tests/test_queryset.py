@@ -103,7 +103,7 @@ class TestQSBase(DbSetup):
         qs2.get_path = Mock(return_value=path2)
 
         qs = qs1 | qs2
-        assert qs.get_path() == {'key1': 15, 'key2': 16, 'key3': 23, 'key4': 42}
+        assert qs.get_path() == {'key1': [4, 15], 'key2': [8, 16], 'key3': 23, 'key4': 42}
 
 
 class TestBatchQuery(DbSetup):

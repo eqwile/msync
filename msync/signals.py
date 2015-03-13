@@ -60,12 +60,13 @@ class SignalConnector(object):
                 if sfield.is_belongs_to_parent(instance):
                     parent_instances = sfield.get_reverse_rel()(instance)
                     for pi in parent_instances:
-                        b[pi] = QSUpdateDependentField(instance=instance, sync_cls=self.parent_sync_cls,
+                        b[pi] = QSUpdateDependentField(sync_cls=self.parent_sync_cls, instance=pi,
                                                        sfield=sfield)
 
             if not nested_sfields and not dependent_sfields and self.parent_meta.pass_filter(instance):
                 document = self.parent_sync_cls.create_document(instance, with_embedded=created)
                 if created:
+                    print '{}.save()'.format(self.parent_sync_cls)
                     document.save()
                 else:
                     b[instance] = QSUpdateParent(sync_cls=self.parent_sync_cls, document=document)
@@ -82,11 +83,12 @@ class SignalConnector(object):
                 if sfield.is_belongs_to_parent(instance):
                     parent_instances = sfield.get_reverse_rel()(instance)
                     for pi in parent_instances:
-                        b[pi] = QSUpdateDependentField(sync_cls=self.parent_sync_cls, instance=instance,
+                        b[pi] = QSUpdateDependentField(sync_cls=self.parent_sync_cls, instance=pi,
                                                        sfield=sfield)
 
             if not nested_sfields and not dependent_sfields and self.parent_meta.pass_filter(instance):
                 pk_path = QSPk(sync_cls=self.parent_sync_cls, instance=instance).get_path()
+                print '{}.filter({}).delete()'.format(self.parent_sync_cls, pk_path)
                 self.parent_meta.document.objects.filter(**pk_path).delete()
 
     def _m2m_changed_handler(self, action, instance, model, pk_set, **kwargs):
