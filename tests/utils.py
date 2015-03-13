@@ -3,6 +3,7 @@ from django_dynamic_fixture import N
 from mongoengine import fields as mfields
 from msync.syncers import DocumentSync, EmbeddedSync
 from msync import fields as sfields
+from msync.utils import queryset_manager
 
 
 NP = lambda *args, **kwargs: N(persist_dependencies=False, *args, **kwargs)
@@ -20,6 +21,7 @@ class DbSetup(object):
             int_field = models.IntegerField()
             m2m_field = models.ManyToManyField(Bar)
             emb_field = models.ForeignKey(Egg)
+            not_included_field = models.CharField()
 
         class Qux(models.Model):
             fk_field = models.ForeignKey(Foo, blank=True, null=True)
@@ -53,7 +55,13 @@ class DbSetup(object):
 
             class Meta:
                 model = Foo
+                collection = 'foos'
+                id_field = 'id'
                 fields = ('id', 'int_field', 'm2m_field', 'fk_field', 'emb_field', 'dep_field', 'dep_field2')
+
+            @queryset_manager
+            def cools(qs):
+                return qs
 
         self.sync_cls = FooSync
         self.foo_sync = FooSync

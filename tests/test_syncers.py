@@ -5,71 +5,30 @@ from mongoengine import fields as mfields
 from msync import fields as sfields
 from msync.syncers import DocumentSync, EmbeddedSync
 from msync.options import Options
+from .utils import DbSetup
 
 
-# class BarModel(models.Model):
-#     quux = models.IntegerField()
+class TestOptions(DbSetup):
+    def test_meta_model(self):
+        assert self.sync_cls._meta.model == self.model
 
+    def test_meta_sync_cls(self):
+        assert self.sync_cls._meta._sync_cls == self.sync_cls
 
-# class FooModel(models.Model):
-#     text = models.CharField()
-#     boo = models.ForeignKey(BarModel)
+    def test_pk_setup(self):
+        assert self.sync_cls._meta._pk_sfield == self.sync_cls.id
+        assert self.bar_sync._meta._pk_sfield == self.bar_sync.id
+        assert self.qux_sync._meta._pk_sfield == self.qux_sync.id
+        assert self.egg_sync._meta._pk_sfield == self.egg_sync.id
 
+    def test_sfields(self):
+        assert set(self.sync_cls._meta._sfields_dict.keys()) == set(self.sync_cls._meta.fields)
+        assert set(self.egg_sync._meta._sfields_dict.keys()) == set(self.egg_sync._meta.fields)
+        assert set(self.bar_sync._meta._sfields_dict.keys()) == set(self.bar_sync._meta.fields)
+        assert set(self.qux_sync._meta._sfields_dict.keys()) == set(self.qux_sync._meta.fields)
 
-# class TestFieldsDocumentSync:
+    def test_qs_managers(self):
+        assert len(self.sync_cls._meta._qs_managers) == 1
 
-#     def setup(self):
-#         class BarEmSync(EmbeddedSync):
-#             class Meta:
-#                 fields = ('id', 'quux')
-#                 model = BarModel
-
-#         class FooBarSync(DocumentSync):
-#             boo = sfields.EmbeddedForeignField(BarEmSync)
-#             class Meta:
-#                 fields = ('id', 'text', 'boo')
-#                 model = FooModel
-#         self.sync_cls = FooBarSync
-#         self.embedded_sync_cls = BarEmSync
-
-#     def test_meta_model(self):
-#         assert self.sync_cls._meta.model == FooModel
-
-#     def test_meta_sync_cls(self):
-#         assert self.sync_cls._meta._sync_cls == self.sync_cls
-    
-
-# class TestMetaFieldsAttr:
-#     def setup(self):
-#         class Foo(models.Model):
-#             field1 = models.IntegerField()
-#             field2 = models.IntegerField()
-#             field3 = models.IntegerField()
-
-#         class FooSync(DocumentSync):
-#             class Meta:
-#                 fields = ('field1', 'field2')
-#                 model = Foo
-#         self.sync_cls = FooSync
-
-#     def test_count_of_fields(self):
-#         assert len(self.sync_cls._meta._sfields) == 2
-
-#     def test_field3_not_in_sfields(self):
-#         assert 'field3' not in self.sync_cls._meta._sfields_dict
-
-#     def test_sfields_eq_to_sfields_dict(self):
-#         assert len(self.sync_cls._meta._sfields) == len(self.sync_cls._meta._sfields_dict)
-
-
-
-# class TestOptions:
-#     def setup(self):
-#         self.m_sync_bases = MagicMock()
-#         self.m_sync_cls = MagicMock()
-#         self.m_meta = MagicMock()
-#         self.options = Options(self.m_sync_cls, self.m_meta, self.m_sync_bases)
-
-#     def test_field_normalizing(self):
-#         assert (self.options._normalize_meta_fields(['field1', ('field2', 'field3')]) ==
-#                 [('field1', 'field1'), ('field2', 'field3')])
+    def test_collection_settings(self):
+        assert self.sync_cls._meta.get_collection_settings() == {'collection': 'foos', 'id_field': 'id'}
