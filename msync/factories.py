@@ -82,8 +82,6 @@ class SyncFieldFactory(object):
             sync_kwargs = {'mfield': mfield(), 'source': field.name, 'primary': field.primary_key,
                            'name': field.name, 'parent_sync_cls': self.sync_cls}
             sync_kwargs.update(kwargs)
-            # print
-            # print 'KWARGS:', sync_kwargs
             return sfields.SyncField(**sync_kwargs)
         raise TypeError(
             'I don\'t know how to create sync field from %s.%s. Go and create yourself!' % (field.model, field)
