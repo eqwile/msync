@@ -103,10 +103,10 @@ class SyncField(BaseField):
     def update_query_path(self):
         return self.name
 
-    def remove_operation(self):
+    def remove_operation(self, many=False):
         return 'unset'
 
-    def update_operation(self, new=False):
+    def update_operation(self, new=False, many=False):
         return 'set'
 
 
@@ -153,11 +153,16 @@ class ListField(SyncField):
     def update_query_path(self):
         return '{}__S'.format(self.name) if self.is_nested() else self.name
 
-    def remove_operation(self):
-        return 'pull'
+    def remove_operation(self, many=False):
+        return 'pull' if not many else 'pull_all'
 
-    def update_operation(self, new=False):
-        return 'set' if not new or self.is_depens_on() else 'push'
+    def update_operation(self, new=False, many=False):
+        if (not new or self.is_depens_on()) and not many:
+            return 'set'
+        elif many:
+            return 'push_all'
+        else:
+            return 'push'
 
     def _construct_list_mfield(self, nested_mfield, ordering=None, reverse=False):
         if ordering:

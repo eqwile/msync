@@ -28,8 +28,10 @@ class QSBase(object):
     def union(self, other):
         path = self.get_path()
         other_path = other.get_path()
-        keys = set(path.keys()) | set(other_path.keys())
-        new_path = dict([self._combine(key, path.get(key), other_path.get(key)) for key in keys])
+        # keys = set(path.keys()) | set(other_path.keys())
+        # new_path = dict([self._combine(key, path.get(key), other_path.get(key)) for key in keys])
+        path.update(other_path)
+        new_path = path
         print new_path
         return QSBase(sync_cls=self._sync_cls, document=self._document, sfield=self._sfield, path=new_path)
 
@@ -131,10 +133,23 @@ class QSClear(QSUpdateDependentField):
 
 
 class QSCreate(QSBase):
+    def __init__(self, documents=None, **kwargs):
+        super(QSCreate, self).__init__(**kwargs)
+        self._documents = documents
+
+        if self._document is not None:
+            self._many = False
+            self._value = self._document
+        elif self._documents:
+            self._many = len(self._documents) > 1
+            self._value = self._documents[0] if not self._many else self._documents
+        else:
+            raise TypeError('At least one document should be supplied to QSCreate')
+
     def _get_path(self):
         sfield_path = self._get_sfield_path()
-        op = self._sfield.update_operation(new=True)
-        return {op + self.delim + sfield_path: self._document}
+        op = self._sfield.update_operation(new=True, many=self._many)
+        return {op + self.delim + sfield_path: self._value}
 
     def _get_sfield_path(self):
         parts = [sf.name for sf in self._sync_cls._meta.get_sync_tree().get_sfield_path(self._sfield)]
@@ -142,14 +157,27 @@ class QSCreate(QSBase):
 
 
 class QSDelete(QSBase):
-    def __init__(self, pk=None, **kwargs):
-        self._pk = pk
+    def __init__(self, pk=None, pks=None, **kwargs):
         super(QSDelete, self).__init__(**kwargs)
+        self._pk = pk
+        self._pks = pks
+
+        if pk is not None:
+            self._many = False
+            self._value = pk
+        elif pks:
+            self._many = len(self._pks) > 1
+            self._value = self._pks[0] if not self._many else self._pks
+        elif self._instance:
+            self._many = False
+            self._value = None
+        else:
+            raise TypeError('At least one pk or instance should be supplied to QSDelete')
 
     def _get_path(self):
-        op = self._sfield.remove_operation()
-        if op == 'pull':
-            pk = QSPk(sync_cls=self._sync_cls, pk=self._pk, instance=self._instance,
+        op = self._sfield.remove_operation(many=self._many)
+        if op in ('pull', 'pull_all'):
+            pk = QSPk(sync_cls=self._sync_cls, pk=self._value, instance=self._instance,
                       sfield=self._sfield).get_path()
         else:
             pk = QSPk(sync_cls=self._sync_cls, sfield=self._sfield).get_path()
