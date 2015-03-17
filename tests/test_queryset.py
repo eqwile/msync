@@ -69,12 +69,26 @@ class TestQSCreate(DbSetup):
         path = QSCreate(sync_cls=self.sync_cls, sfield=self.sync_cls.m2m_field, document=document).get_path()
         assert path == {'push__m2m_field': document}
 
+    def test_m2m_many_adding(self):
+        ins1, ins2 = NP(self.bar), NP(self.bar)
+        doc1 = self.bar_sync.create_document(ins1)
+        doc2 = self.bar_sync.create_document(ins2)
+        path = QSCreate(sync_cls=self.sync_cls, sfield=self.sync_cls.m2m_field,
+                        documents=[doc1, doc2]).get_path()
+        assert path == {'push_all__m2m_field': [doc1, doc2]}
+
 
 class TestQSDelete(DbSetup):
     def test_m2m_deleting(self):
         instance = NP(self.bar)
         path = QSDelete(sync_cls=self.sync_cls, sfield=self.sync_cls.m2m_field, instance=instance).get_path()
         assert path == {'pull__m2m_field__id': instance.id}
+
+    def test_m2m_many_deleting(self):
+        ins1, ins2 = NP(self.bar), NP(self.bar)
+        path = QSDelete(sync_cls=self.sync_cls, sfield=self.sync_cls.m2m_field,
+                        pks=[ins1.pk, ins2.pk]).get_path()
+        assert path == {'pull_all__m2m_field__id': [ins1.pk, ins2.pk]}
 
     def test_m2m_deleting(self):
         path = QSDelete(sync_cls=self.sync_cls, sfield=self.sync_cls.m2m_field, pk=15).get_path()
@@ -103,7 +117,7 @@ class TestQSBase(DbSetup):
         qs2.get_path = Mock(return_value=path2)
 
         qs = qs1 | qs2
-        assert qs.get_path() == {'key1': [4, 15], 'key2': [8, 16], 'key3': 23, 'key4': 42}
+        assert qs.get_path() == {'key1': 15, 'key2': 16, 'key3': 23, 'key4': 42}
 
 
 class TestBatchQuery(DbSetup):
