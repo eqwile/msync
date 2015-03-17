@@ -28,26 +28,8 @@ class QSBase(object):
     def union(self, other):
         path = self.get_path()
         other_path = other.get_path()
-        # keys = set(path.keys()) | set(other_path.keys())
-        # new_path = dict([self._combine(key, path.get(key), other_path.get(key)) for key in keys])
         path.update(other_path)
-        new_path = path
-        print new_path
-        return QSBase(sync_cls=self._sync_cls, document=self._document, sfield=self._sfield, path=new_path)
-
-    def _combine(self, key, v1, v2):
-        if v1 is None:
-            return (key, v2)
-        elif v2 is None:
-            return (key, v1)
-        elif islist(v1):
-            v1.append(v2)
-            return ('push_all', v1)
-        elif islist(v2):
-            v2.append(v1)
-            return ('push_all', v2)
-        else:
-            return ('push_all', [v1, v2])
+        return QSBase(sync_cls=self._sync_cls, document=self._document, sfield=self._sfield, path=path)
             
 
 class QSPk(QSBase):
