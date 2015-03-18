@@ -82,6 +82,14 @@ class SyncBase(six.with_metaclass(SyncMC)):
             signal_connector = cls.signal_connector_cls(cls)
             signal_connector.setup()
 
+    @classmethod
+    def has_field(cls, field):
+        return field in cls._meta.sfields_dict
+
+    @classmethod
+    def has_some_field(cls, fields):
+        return any(cls.has_field(field) for field in fields)
+
 
 class DocumentSync(SyncBase):
     document_type = document.Document

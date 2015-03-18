@@ -19,6 +19,7 @@ class Options(object):
         self.filter = getattr(meta, 'filter', None)
         self.exclude = getattr(meta, 'exclude', tuple())
         self.fields = getattr(meta, 'fields', None)
+        self.async = getattr(meta, 'async', False)
         self._field_names = self._get_field_names_from_meta_fields()
 
         self.document_type = document_type

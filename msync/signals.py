@@ -46,6 +46,10 @@ class SignalConnector(object):
             nested_sfields = self.nested_model_sfields_dict[instance.__class__]
             for sfield in nested_sfields:
                 sync_cls = sfield.get_nested_sync_cls()
+                
+                if update_fields and not sync_cls.has_some_field(update_fields):
+                    continue
+                
                 document = sync_cls.create_document(instance, with_embedded=created)
 
                 if created:
@@ -65,6 +69,10 @@ class SignalConnector(object):
                                                        sfield=sfield)
 
             if not nested_sfields and not dependent_sfields and self.parent_meta.pass_filter(instance):
+                
+                if update_fields and not self.parent_sync_cls.has_some_field(update_fields):
+                    return
+                
                 document = self.parent_sync_cls.create_document(instance, with_embedded=created)
                 if created:
                     print '{}.save()'.format(self.parent_sync_cls)

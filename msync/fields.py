@@ -8,7 +8,8 @@ from .utils import get_from_source
 
 class BaseField(object):
     def __init__(self, mfield, source=None, sync_cls=None, primary=False, reverse_rel=None,
-                 depends_on=None, bulk_source=None, is_belongs=None, name=None, parent_sync_cls=None):
+                 depends_on=None, bulk_source=None, is_belongs=None, name=None, parent_sync_cls=None,
+                 async=False):
         self.mfield = mfield
         self._source = source
         self._bulk_source = bulk_source
@@ -19,6 +20,7 @@ class BaseField(object):
         self._reverse_rel = reverse_rel
         self.depends_on = depends_on
         self.is_belongs = is_belongs
+        self.async = async
 
     def contribute_to_class(self, sync_cls, name):
         self.sync_cls = sync_cls
@@ -80,7 +82,7 @@ class BaseField(object):
 class SyncField(BaseField):
 
     def is_nested(self):
-        """Nested means it contains embedded syncs"""
+        """Nested means it contains embedded sync"""
         return self.nested_sync_cls is not None
 
     def get_nested_sync_cls(self):
