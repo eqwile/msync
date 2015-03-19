@@ -96,7 +96,10 @@ class SyncBase(six.with_metaclass(SyncMC)):
     @classmethod
     def connect_signals(cls):
         """
-        Подключает сигналы
+        Подключает сигналы для sync классов, которые наследуют 
+        DocumentSync и DynamicDocumentSync. У встроенных sync'ов
+        подключение не происходит, т.к. они обновляются через
+        классы, в которые они втроены
         """
         if cls.signal_connector_cls is not None and cls._meta.is_need_to_connect_signals():
             signal_connector = cls.signal_connector_cls(cls)
@@ -104,6 +107,11 @@ class SyncBase(six.with_metaclass(SyncMC)):
 
     @classmethod
     def has_field(cls, field):
+        """
+        Проверяет на существование поля у класса.
+        Используется в сигналах для фильтрования объектов,
+        которые не нужно обновлять.
+        """
         return field in cls._meta.sfields_dict
 
     @classmethod
