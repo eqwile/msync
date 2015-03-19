@@ -130,12 +130,11 @@ class SignalConnector(object):
         with BatchQuery(self.parent_sync_cls) as b, BatchTask(self.parent_sync_cls) as t:
             nested_sfields = self.nested_model_sfields_dict[model]
             for sfield in nested_sfields:
-                sync_cls = sfield.get_nested_sync_cls()
-
                 task = None
+
                 if action == 'post_add':
-                    task = partial(m2m_post_add, parent_sync_cls=self.parent_sync_cls, sync_cls=sync_cls,
-                                   sfield=sfield, pk_set=pk_set, model=model, instance=instance)
+                    task = partial(m2m_post_add, parent_sync_cls=self.parent_sync_cls, sfield=sfield,
+                                   pk_set=pk_set, model=model, instance=instance)
                 elif action == 'post_remove':
                     task = partial(m2m_post_remove, parent_sync_cls=self.parent_sync_cls, sfield=sfield,
                                    pk_set=pk_set, instance=instance)
@@ -144,7 +143,7 @@ class SignalConnector(object):
                                    instance=instance)
 
                 if task is not None:
-                    if self._is_dependent_sfield_async():
+                    if self._is_nested_sfield_async(sfield):
                         t.add(task)
                     else:
                         task(b)
@@ -195,8 +194,8 @@ def delete_parent(_, parent_sync_cls=None, parent_meta=None, instance=None):
     parent_meta.document.objects.filter(**pk_path).delete()
 
 
-def m2m_post_add(_, parent_sync_cls=None, sync_cls=None, sfield=None, pk_set=None, model=None,
-                 instance=None):
+def m2m_post_add(_, parent_sync_cls=None, sfield=None, pk_set=None, model=None, instance=None):
+    sync_cls = sfield.get_nested_sync_cls()
     model_instances = model.objects.filter(pk__in=pk_set)
 
     documents = [sync_cls.create_document(model_instance, with_embedded=True)
