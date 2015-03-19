@@ -68,16 +68,36 @@ class SyncBase(six.with_metaclass(SyncMC)):
 
     @classmethod
     def create_document(cls, instance, with_embedded=False):
+        """
+        Создает документ на основе объекта класса cls._meta.model
+        
+        :param instance: объект класса cls._meta.model
+        :param with_embedded: заполнить встроенные объекты в документе
+        :returns document: возвращает документ класса cls._meta.document
+        """
         if cls._meta.pass_filter(instance):
             return cls._document_factory.create(instance, with_embedded=with_embedded)
 
     @classmethod
     def bulk_create_documents(cls, instances):
+        """
+        Создает документ для каждого объекта из списка instances.
+        Обычно используется при инициализации монги, поэтому нет
+        параметра with_embedded.
+
+        :param instances: список объектов класса cls._meta.model
+        :returns dict: возвращает словарь, где ключами являются 
+        объекты из списка instances, а значениями - документы
+        {instance: document, ...}
+        """
         passed_instances = filter(cls._meta.pass_filter, instances)
         return cls._document_factory.bulk_create(passed_instances)
 
     @classmethod
     def connect_signals(cls):
+        """
+        Подключает сигналы
+        """
         if cls.signal_connector_cls is not None and cls._meta.is_need_to_connect_signals():
             signal_connector = cls.signal_connector_cls(cls)
             signal_connector.setup()
