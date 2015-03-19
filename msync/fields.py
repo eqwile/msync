@@ -9,7 +9,7 @@ from .utils import get_from_source
 class BaseField(object):
     def __init__(self, mfield, source=None, sync_cls=None, primary=False, reverse_rel=None,
                  depends_on=None, bulk_source=None, is_belongs=None, name=None, parent_sync_cls=None,
-                 async=False):
+                 async=None):
         self.mfield = mfield
         self._source = source
         self._bulk_source = bulk_source
@@ -20,7 +20,7 @@ class BaseField(object):
         self._reverse_rel = reverse_rel
         self.depends_on = depends_on
         self.is_belongs = is_belongs
-        self.async = async
+        self.async = None
 
     def contribute_to_class(self, sync_cls, name):
         self.sync_cls = sync_cls

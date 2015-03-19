@@ -1,7 +1,7 @@
 import operator
 from collections import defaultdict
 from .factories import DocumentFactory
-from .utils import islist
+from .tasks import sync_task
 
 
 class QSBase(object):
@@ -30,7 +30,7 @@ class QSBase(object):
         other_path = other.get_path()
         path.update(other_path)
         return QSBase(sync_cls=self._sync_cls, document=self._document, sfield=self._sfield, path=path)
-            
+
 
 class QSPk(QSBase):
     def __init__(self, pk=None, **kwargs):
@@ -188,7 +188,7 @@ class BatchQuery(object):
             qs = reduce(operator.or_, qss)
             qs_path = qs.get_path()
             pk_path = dict(pk_path)
-            print '{}.filter({}).update({})'.format(self._sync_cls, pk_path, qs_path)
+            print('{}.filter({}).update({})'.format(self._sync_cls, pk_path, qs_path))
             self._sync_cls._meta.document.objects.filter(**pk_path).update(**qs_path)
 
     def __setitem__(self, key, qs):
@@ -203,3 +203,21 @@ class BatchQuery(object):
 
         pk_path = QSPk(sync_cls=self._sync_cls, instance=ins, sfield=sfield).get_path()
         return frozenset(pk_path.items())
+
+
+class BatchTask(object):
+    def __init__(self, sync_cls):
+        self._sync_cls = sync_cls
+        self._async_tasks = []
+
+    def __enter__(self):
+        del self._async_tasks[:]
+        return self
+
+    def __exit__(self, t, value, traceback):
+        self.run()
+
+    def run(self):
+        if not self._async_tasks:
+            return
+        sync_task.delay(self._sync_cls, self._async_tasks)

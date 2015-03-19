@@ -10,7 +10,7 @@ setup(
     license='MIT',
     keywords='django orm mongo mongoengine sync',
     packages=['msync'],
-    install_requires=['django', 'mongoengine'],
+    install_requires=['django', 'mongoengine', 'celery'],
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Intended Audience :: Developers',

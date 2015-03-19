@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-from collections import defaultdict
+from functools import partial
 from django.db.models import signals
 from .queryset import (BatchQuery, QSUpdate, QSUpdateDependentField, QSUpdateParent, QSPk, QSClear,
-                       QSDelete, QSCreate)
+                       QSDelete, QSCreate, BatchTask)
 
 
 class SignalConnector(object):
@@ -38,96 +38,179 @@ class SignalConnector(object):
         dispatch_uid = '{}-{}-{}'.format(self.parent_sync_cls.__name__, model.__name__, handler.__name__)
         signal.connect(handler, sender=model, weak=False, dispatch_uid=dispatch_uid)
 
+    def _is_nested_sfield_async(self, sfield):
+        return sfield.async or sfield.get_nested_sync_cls()._meta.async
+
+    def _is_dependent_sfield_async(self, sfield):
+        return sfield.async
+
+    def _is_parent_sync_async(self):
+        return self.parent_sync_cls._meta.async
+
     def _post_save_handler(self, instance, raw, created, using, update_fields, **kwargs):
         if self.is_m2m_through_model_of_parent(instance.__class__) and created:
             return
 
-        with BatchQuery(self.parent_sync_cls) as b:
+        with BatchQuery(self.parent_sync_cls) as b, BatchTask(self.parent_sync_cls) as t:
             nested_sfields = self.nested_model_sfields_dict[instance.__class__]
             for sfield in nested_sfields:
-                sync_cls = sfield.get_nested_sync_cls()
-                
-                if update_fields and not sync_cls.has_some_field(update_fields):
+                if update_fields and not sfield.get_nested_sync_cls().has_some_field(update_fields):
                     continue
-                
-                document = sync_cls.create_document(instance, with_embedded=created)
 
-                if created:
-                    par_ins = sfield.get_reverse_rel()(instance)
-                    for pi in par_ins:
-                        b[pi] = QSCreate(sync_cls=self.parent_sync_cls, document=document, sfield=sfield)
+                task = partial(save_nested_sfield, parent_sync_cls=self.parent_sync_cls, sfield=sfield,
+                               instance=instance, created=created)
+
+                if self._is_nested_sfield_async(sfield):
+                    t.add(task)
                 else:
-                    b[(instance, sfield)] = QSUpdate(sync_cls=self.parent_sync_cls, document=document,
-                                                     sfield=sfield)
+                    task(b)
 
             dependent_sfields = self.depends_on_model_sfields_dict[instance.__class__]
             for sfield in dependent_sfields:
                 if sfield.is_belongs_to_parent(instance):
-                    parent_instances = sfield.get_reverse_rel()(instance)
-                    for pi in parent_instances:
-                        b[pi] = QSUpdateDependentField(sync_cls=self.parent_sync_cls, instance=pi,
-                                                       sfield=sfield)
+
+                    task = partial(save_dependent_sfield, parent_sync_cls=self.parent_sync_cls, sfield=sfield,
+                                   instance=instance)
+
+                    if self._is_dependent_sfield_async(sfield):
+                        t.add(task)
+                    else:
+                        task(b)
 
             if not nested_sfields and not dependent_sfields and self.parent_meta.pass_filter(instance):
-                
                 if update_fields and not self.parent_sync_cls.has_some_field(update_fields):
                     return
-                
-                document = self.parent_sync_cls.create_document(instance, with_embedded=created)
-                if created:
-                    print '{}.save()'.format(self.parent_sync_cls)
-                    document.save()
+
+                task = partial(save_parent_sfields, parent_sync_cls=self.parent_sync_cls, instance=instance,
+                               created=created)
+
+                if self._is_parent_sync_async():
+                    t.add(task)
                 else:
-                    b[instance] = QSUpdateParent(sync_cls=self.parent_sync_cls, document=document)
+                    task(b)
 
     def _post_delete_handler(self, instance, using, **kwargs):
-        with BatchQuery(self.parent_sync_cls) as b:
+        with BatchQuery(self.parent_sync_cls) as b, BatchTask(self.parent_sync_cls) as t:
             nested_sfields = self.nested_model_sfields_dict[instance.__class__]
             for sfield in nested_sfields:
-                b[(instance, sfield)] = QSDelete(sync_cls=self.parent_sync_cls, sfield=sfield,
-                                                 instance=instance)
+
+                task = partial(delete_nested_sfield, parent_sync_cls=self.parent_sync_cls, sfield=sfield,
+                               instance=instance)
+
+                if self._is_nested_sfield_async(sfield):
+                    t.add(task)
+                else:
+                    task(b)
 
             dependent_sfields = self.depends_on_model_sfields_dict[instance.__class__]
             for sfield in dependent_sfields:
                 if sfield.is_belongs_to_parent(instance):
-                    parent_instances = sfield.get_reverse_rel()(instance)
-                    for pi in parent_instances:
-                        b[pi] = QSUpdateDependentField(sync_cls=self.parent_sync_cls, instance=pi,
-                                                       sfield=sfield)
+
+                    task = partial(delete_dependent_sfield, parent_sync_cls=self.parent_sync_cls,
+                                   instance=instance, sfield=sfield)
+
+                    if self._is_dependent_sfield_async(sfield):
+                        t.add(task)
+                    else:
+                        task(b)
 
             if not nested_sfields and not dependent_sfields and self.parent_meta.pass_filter(instance):
-                pk_path = QSPk(sync_cls=self.parent_sync_cls, instance=instance).get_path()
-                print '{}.filter({}).delete()'.format(self.parent_sync_cls, pk_path)
-                self.parent_meta.document.objects.filter(**pk_path).delete()
+                task = partial(delete_parent, parent_sync_cls=self.parent_sync_cls, instance=instance,
+                               parent_meta=self.parent_meta)
+
+                if self._is_parent_sync_async():
+                    t.add(task)
+                else:
+                    task(b)
 
     def _m2m_changed_handler(self, action, instance, model, pk_set, **kwargs):
-        with BatchQuery(self.parent_sync_cls) as b:
-            if action == 'post_add':
-                sfield_docs_dict = defaultdict(list)
-                
-                model_instances = model.objects.filter(pk__in=pk_set)
-                for model_instance in model_instances:
-                    nested_sfields = self.nested_model_sfields_dict[model]
-                    for sfield in nested_sfields:
-                        sync_cls = sfield.get_nested_sync_cls()
-                        document = sync_cls.create_document(model_instance, with_embedded=True)
-                        sfield_docs_dict[sfield].append(document)
+        if action not in ('post_add', 'post_remove', 'post_clear'):
+            return
 
-                for sfield, documents in sfield_docs_dict.items():
-                    b[instance] = QSCreate(sync_cls=self.parent_sync_cls, documents=documents,
+        with BatchQuery(self.parent_sync_cls) as b, BatchTask(self.parent_sync_cls) as t:
+            nested_sfields = self.nested_model_sfields_dict[model]
+            for sfield in nested_sfields:
+                sync_cls = sfield.get_nested_sync_cls()
+
+                task = None
+                if action == 'post_add':
+                    task = partial(m2m_post_add, parent_sync_cls=self.parent_sync_cls, sync_cls=sync_cls,
+                                   sfield=sfield, pk_set=pk_set, model=model, instance=instance)
+                elif action == 'post_remove':
+                    task = partial(m2m_post_remove, parent_sync_cls=self.parent_sync_cls, sfield=sfield,
+                                   pk_set=pk_set, instance=instance)
+                elif action == 'post_clear':
+                    task = partial(m2m_post_clear, parent_sync_cls=self.parent_sync_cls, sfield=sfield,
+                                   instance=instance)
+
+                if task is not None:
+                    if self._is_dependent_sfield_async():
+                        t.add(task)
+                    else:
+                        task(b)
+
+
+def save_nested_sfield(batch, parent_sync_cls=None, sfield=None, instance=None, created=None):
+    sync_cls = sfield.get_nested_sync_cls()
+    document = sync_cls.create_document(instance, with_embedded=created)
+
+    if created:
+        par_ins = sfield.get_reverse_rel()(instance)
+        for pi in par_ins:
+            batch[pi] = QSCreate(sync_cls=parent_sync_cls, document=document, sfield=sfield)
+    else:
+        batch[(instance, sfield)] = QSUpdate(sync_cls=parent_sync_cls, document=document,
+                                             sfield=sfield)
+
+
+def save_dependent_sfield(batch, parent_sync_cls=None, sfield=None, instance=None):
+    parent_instances = sfield.get_reverse_rel()(instance)
+    for pi in parent_instances:
+        batch[pi] = QSUpdateDependentField(sync_cls=parent_sync_cls, instance=pi,
                                            sfield=sfield)
 
-            elif action == 'post_remove':
-                for pk in pk_set:
-                    nested_sfields = self.nested_model_sfields_dict[model]
-                    for sfield in nested_sfields:
-                        with BatchQuery(self.parent_sync_cls) as remove_bq:
-                            remove_bq[instance] = QSDelete(sync_cls=self.parent_sync_cls, sfield=sfield, pk=pk)
 
-            elif action == 'post_clear':
-                nested_sfields = self.nested_model_sfields_dict[model]
-                for sfield in nested_sfields:
-                    b[instance] = QSClear(sync_cls=self.parent_sync_cls, sfield=sfield, instance=instance)
+def save_parent_sfields(batch, parent_sync_cls=None, instance=None, created=None):
+    document = parent_sync_cls.create_document(instance, with_embedded=created)
+    if created:
+        print('{}.save()'.format(parent_sync_cls))
+        document.save()
+    else:
+        batch[instance] = QSUpdateParent(sync_cls=parent_sync_cls, document=document)
 
-            elif action not in ('pre_add', 'pre_remove', 'pre_clear'):
-                raise TypeError('Get %s, %s, %s' % (action, instance, model))
+
+def delete_nested_sfield(batch, parent_sync_cls=None, sfield=None, instance=None):
+    batch[(instance, sfield)] = QSDelete(sync_cls=parent_sync_cls, sfield=sfield, instance=instance)
+
+
+def delete_dependent_sfield(batch, parent_sync_cls=None, instance=None, sfield=None):
+    parent_instances = sfield.get_reverse_rel()(instance)
+    for pi in parent_instances:
+        batch[pi] = QSUpdateDependentField(sync_cls=parent_sync_cls, instance=pi, sfield=sfield)
+
+
+def delete_parent(_, parent_sync_cls=None, parent_meta=None, instance=None):
+    pk_path = QSPk(sync_cls=parent_sync_cls, instance=instance).get_path()
+    print('{}.filter({}).delete()'.format(parent_sync_cls, pk_path))
+    parent_meta.document.objects.filter(**pk_path).delete()
+
+
+def m2m_post_add(_, parent_sync_cls=None, sync_cls=None, sfield=None, pk_set=None, model=None,
+                 instance=None):
+    model_instances = model.objects.filter(pk__in=pk_set)
+
+    documents = [sync_cls.create_document(model_instance, with_embedded=True)
+                 for model_instance in model_instances]
+
+    with BatchQuery(parent_sync_cls) as b:
+        b[instance] = QSCreate(sync_cls=parent_sync_cls, documents=documents, sfield=sfield)
+
+
+def m2m_post_remove(_, parent_sync_cls=None, sfield=None, pk_set=None, instance=None):
+    for pk in pk_set:
+        with BatchQuery(parent_sync_cls) as b:
+            b[instance] = QSDelete(sync_cls=parent_sync_cls, sfield=sfield, pk=pk)
+
+
+def m2m_post_clear(batch, parent_sync_cls=None, sfield=None, instance=None):
+    batch[instance] = QSClear(sync_cls=parent_sync_cls, sfield=sfield, instance=instance)
