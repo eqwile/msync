@@ -210,6 +210,9 @@ class BatchTask(object):
         self._sync_cls = sync_cls
         self._async_tasks = []
 
+    def add(self, task):
+        self._async_tasks.append(task)
+
     def __enter__(self):
         del self._async_tasks[:]
         return self
