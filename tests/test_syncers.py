@@ -31,4 +31,4 @@ class TestOptions(DbSetup):
         assert len(self.sync_cls._meta._qs_managers) == 1
 
     def test_collection_settings(self):
-        assert self.sync_cls._meta.get_collection_settings() == {'collection': 'foos', 'id_field': 'id'}
+        assert self.sync_cls._meta.collection_settings == {'collection': 'foos', 'id_field': 'id'}

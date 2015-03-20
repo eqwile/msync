@@ -13,7 +13,6 @@ class Options(object):
 
     def __init__(self, sync_cls, meta, sync_bases, document_type=None):
         self._sync_cls = sync_cls
-        self._meta_cls = meta
 
         self.model = getattr(meta, 'model', None)
         self.filter = getattr(meta, 'filter', None)
@@ -38,7 +37,7 @@ class Options(object):
 
         self.sync_tree = None
         self.own_sync_tree = None
-        self.collection_settings = None
+        self.collection_settings = self.get_collection_settings(meta)
         self.bases = self._get_sync_bases(sync_bases)
 
     def add_field(self, name, field):
@@ -59,12 +58,8 @@ class Options(object):
         self._pk_sfield = sfield
         self.__pk_sfield_cache = None
 
-    def get_collection_settings(self):
-        if self.collection_settings is None:
-            self.collection_settings = {key: getattr(self._meta_cls, key)
-                                        for key in self._collection_setting_keys
-                                        if hasattr(self._meta_cls, key)}
-        return self.collection_settings
+    def get_collection_settings(self, meta_cls):
+        return {key: getattr(meta_cls, key) for key in self._collection_setting_keys if hasattr(meta_cls, key)}
 
     def _add_model_fields(self):
         if self.model is None:
@@ -148,7 +143,7 @@ class Options(object):
     pk_sfield = property(_get_pk_sfield, _set_my_ass)
 
     def is_need_to_connect_signals(self):
-        return self.model is not None or self.get_collection_settings().get('allow_inheritance', False)
+        return self.model is not None or self.collection_settings.get('allow_inheritance', False)
 
     def get_document_bases(self):
         if not self.bases:
@@ -245,7 +240,7 @@ class SyncTree(object):
             self._pr(k, self._tree[k], 0)
 
     def _pr(self, name, tree, offset):
-        print '%s%s' % (' ' * offset, name)
+        print '%s%s(%s)' % (' ' * offset, name, hash(name))
         for k in tree:
             self._pr(k, tree[k], offset + 4)
 
