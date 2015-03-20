@@ -17,8 +17,12 @@ class DocumentSchemeFactory(object):
         mfields.update({
             'meta': self.get_meta(),
             'to_dict': to_dict,
+            '__module__': self.__module__
         })
         document_cls = type(self.name, self.meta.get_document_bases(), mfields)
+
+        # since pickle wants the class in a global it can have it
+        globals()[self.name] = document_cls
         return self.exclude_mfields(document_cls)
 
     def get_mfields(self):
@@ -35,7 +39,7 @@ class DocumentSchemeFactory(object):
 
     def get_meta(self):
         m = {'queryset_class': DefaultQuerySet}
-        settings = self.meta.get_collection_settings()
+        settings = self.meta.collection_settings
         m.update(settings)
         return m
 
