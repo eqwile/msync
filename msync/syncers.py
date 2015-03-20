@@ -124,7 +124,8 @@ class DocumentSync(SyncBase):
     """
     Корневой класс, который используется для синхронизации
     django-orm с mongoengine. Классы, наследующие от этого
-    класса, имеют коллекцию в монге.
+    класса, имеют коллекцию в монге. При создании класса
+    также генерируется класс Document для работы с базой
     """
     document_type = document.Document
     signal_connector_cls = SignalConnector

@@ -1,4 +1,22 @@
 # -*- coding: utf-8 -*-
+"""
+Существует три вида полей:
+    - Простые поля (simple). Обычно используются для синхронизации полей модельки, 
+      которые не являются ForeignKey и ManyToMany. 
+      Пример:
+          field = SyncField(mfield=IntField(), source='model_field')
+
+    - Встроенные (embedded). Позволяют встраивать объекты в схемы документов и
+      принимают в качестве аргумента класс EmbeddedSync для задания схемы этого объекта.
+      Пример:
+          field = EmbeddedField(FooEmbeddedSync, source='foo')
+
+    - Зависимые (dependent). Принимают модельку от которой зависит значение поля,
+      поэтому происходит подключение сигналов. Примером использования являются счетчики.
+      Пример:
+          field = SyncField(mfield=IntField(), depends_on=FooModel, source=source, 
+                            reverse_rel=reverse_func)
+"""
 from collections import defaultdict
 from django.db import models
 from mongoengine import fields as mfields
