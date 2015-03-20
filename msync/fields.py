@@ -38,7 +38,7 @@ class BaseField(object):
         self._reverse_rel = reverse_rel
         self.depends_on = depends_on
         self.is_belongs = is_belongs
-        self.async = None
+        self.async = async
 
     def contribute_to_class(self, sync_cls, name):
         self.sync_cls = sync_cls
@@ -92,6 +92,13 @@ class BaseField(object):
 
     def get_mfield(self):
         return self.mfield
+
+    def __hash__(self):
+        return hash((self.sync_cls.__module__, self.sync_cls.__name__, self.name))
+
+    def __eq__(self, other):
+        return ((self.sync_cls.__module__, self.sync_cls.__name__, self.name) ==
+                (other.sync_cls.__module__, other.sync_cls.__name__, other.name))
 
     def __str__(self):
         return '%s.%s' % (self.sync_cls.__name__, self.name)
