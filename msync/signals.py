@@ -39,7 +39,9 @@ class SignalConnector(object):
         signal.connect(handler, sender=model, weak=False, dispatch_uid=dispatch_uid)
 
     def _is_nested_sfield_async(self, sfield):
-        return sfield.async or sfield.get_nested_sync_cls()._meta.async
+        if sfield.async is not None:
+            return sfield.async
+        return sfield.get_nested_sync_cls()._meta.async
 
     def _is_dependent_sfield_async(self, sfield):
         return sfield.async
@@ -213,3 +215,15 @@ def m2m_post_remove(_, parent_sync_cls=None, sfield=None, pk_set=None, instance=
 
 def m2m_post_clear(batch, parent_sync_cls=None, sfield=None, instance=None):
     batch[instance] = QSClear(sync_cls=parent_sync_cls, sfield=sfield, instance=instance)
+
+
+def _pickle_method(m):
+    if m.im_self is None:
+        return getattr, (m.im_class, m.im_func.func_name)
+    else:
+        return getattr, (m.im_self, m.im_func.func_name)
+
+
+import copy_reg
+import types
+copy_reg.pickle(types.MethodType, _pickle_method)
