@@ -87,7 +87,7 @@ class SyncBase(six.with_metaclass(SyncMC)):
 
         :param instances: список объектов класса cls._meta.model
         :returns dict: возвращает словарь, где ключами являются 
-        объекты из списка instances, а значениями - документы
+        объекты из списка instances, а значениями - документы:
         {instance: document, ...}
         """
         passed_instances = filter(cls._meta.pass_filter, instances)
@@ -96,10 +96,10 @@ class SyncBase(six.with_metaclass(SyncMC)):
     @classmethod
     def connect_signals(cls):
         """
-        Подключает сигналы для sync классов, которые наследуют 
+        Подключает сигналы для sync-классов, которые наследуют 
         DocumentSync и DynamicDocumentSync. У встроенных sync'ов
         подключение не происходит, т.к. они обновляются через
-        классы, в которые они втроены
+        классы, в которые они встроены
         """
         if cls.signal_connector_cls is not None and cls._meta.is_need_to_connect_signals():
             signal_connector = cls.signal_connector_cls(cls)
@@ -110,7 +110,8 @@ class SyncBase(six.with_metaclass(SyncMC)):
         """
         Проверяет на существование поля у класса.
         Используется в сигналах для фильтрования объектов,
-        которые не нужно обновлять.
+        которые не нужно обновлять, т.к. нет такого поля 
+        в монге
         """
         return field in cls._meta.sfields_dict
 
@@ -120,17 +121,38 @@ class SyncBase(six.with_metaclass(SyncMC)):
 
 
 class DocumentSync(SyncBase):
+    """
+    Корневой класс, который используется для синхронизации
+    django-orm с mongoengine. Классы, наследующие от этого
+    класса, имеют коллекцию в монге.
+    """
     document_type = document.Document
     signal_connector_cls = SignalConnector
 
 
 class EmbeddedSync(SyncBase):
+    """
+    Используется для встраивания объектов в поля других
+    sync-классов. Подключения сигнала не происходит,
+    коллекция в монге не создается.
+    """
     document_type = document.EmbeddedDocument
 
 
 class DynamicDocumentSync(DocumentSync):
+    """
+    Имеет те же свойства, что и DocumentSync, с одним
+    дополнительным: в запросах к базе можно использовать
+    любые поля. Хотя DynamicDocument обладает еще другими
+    свойствами, но на данный момент мы используем этот 
+    sync только из-за динамических полей в запросах
+    """
     document_type = document.DynamicDocument
 
 
 class DynamicEmbeddedSync(EmbeddedSync):
+    """
+    Добавил только из-за того, чтобы документ 
+    DynamicEmbeddedDocument из mongoengine не пропал :)
+    """
     document_type = document.DynamicEmbeddedDocument
