@@ -223,4 +223,5 @@ class BatchTask(object):
     def run(self):
         if not self._async_tasks:
             return
+
         sync_task.delay(self._sync_cls, self._async_tasks)

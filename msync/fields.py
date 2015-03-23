@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Существует три вида полей:
-    - Простые поля (simple). Обычно используются для синхронизации полей модельки, 
-      которые не являются ForeignKey и ManyToMany. 
+    - Простые поля (simple). Обычно используются для синхронизации полей модельки.
       Пример:
           field = SyncField(mfield=IntField(), source='model_field')
 
@@ -102,6 +101,11 @@ class BaseField(object):
 
     def __str__(self):
         return '%s.%s' % (self.sync_cls.__name__, self.name)
+
+    def __getstate__(self):
+        # эти поля обычно являются динамическими и для сериализации не подходят
+        not_pickle = ('_bulk_source', 'mfield')
+        return dict((k, v) for (k, v) in self.__dict__.iteritems() if k not in not_pickle)
 
 
 class SyncField(BaseField):

@@ -71,8 +71,8 @@ class SignalConnector(object):
             for sfield in dependent_sfields:
                 if sfield.is_belongs_to_parent(instance):
 
-                    task = partial(save_dependent_sfield, parent_sync_cls=self.parent_sync_cls, sfield=sfield,
-                                   instance=instance)
+                    task = partial(save_dependent_sfield, parent_sync_cls=self.parent_sync_cls,
+                                   sfield=sfield, instance=instance)
 
                     if self._is_dependent_sfield_async(sfield):
                         t.add(task)
