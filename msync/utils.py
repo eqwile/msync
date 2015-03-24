@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 import types
 import collections
+from functools import wraps
+from contextlib import contextmanager
 from django.core.paginator import Paginator
 from bson import ObjectId
 from mongoengine.queryset import QuerySet, QuerySetManager, queryset_manager as qm
@@ -72,3 +74,23 @@ def do_bulk_insert_of_sync_cls(sync_cls, per_page=1000):
         if documents:
             print '%s: %s' % (model, len(documents))
             document.objects.insert(documents.values())
+
+
+def with_disabled_msync(f):
+    @wraps(f)
+    def wrapped(*args, **kwargs):
+        with disabled_msync():
+            return f(*args, **kwargs)
+    return wrapped
+
+
+@contextmanager
+def disabled_msync():
+    from .queryset import BatchQuery, BatchTask
+    old_bq, old_bt = BatchQuery.run, BatchTask.run
+    new_run = lambda self: None
+    BatchQuery.run = new_run
+    BatchTask.run = new_run
+    yield
+    BatchQuery.run = old_bq
+    BatchTask.run = old_bt
