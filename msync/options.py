@@ -9,7 +9,7 @@ class Options(object):
     _collection_setting_keys = ('allow_inheritance', 'collection', 'id_field', 'max_documents',
                                 'max_size', 'indexes', 'index_options', 'index_background',
                                 'index_drop_dups', 'index_cls', 'ordering', 'shard_key', 'abstract',
-                                'queryset_class')
+                                'queryset_class', 'auto_create_index')
 
     def __init__(self, sync_cls, meta, sync_bases, document_type=None):
         self._sync_cls = sync_cls
