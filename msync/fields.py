@@ -248,3 +248,54 @@ class ListOfEmbeddedForeignRelatedObjectsField(ListField):
                 if isinstance(field, models.ForeignKey) and field.related_field.model == self.sync_cls._meta.model
             )
         return self.__fk_field_name
+
+
+class MongoSyncField(SyncField):
+    mfield_cls = None
+
+    def __init__(self, *args, **kwargs):
+        super(MongoSyncField, self).__init__(mfield=self.mfield_cls(), *args, **kwargs)
+
+
+class IntField(MongoSyncField):
+    mfield_cls = mfields.IntField
+
+
+class FloatField(MongoSyncField):
+    mfield_cls = mfields.FloatField
+
+
+class DecimalField(MongoSyncField):
+    mfield_cls = mfields.DecimalField
+
+
+class StringField(MongoSyncField):
+    mfield_cls = mfields.StringField
+
+
+class DictField(MongoSyncField):
+    mfield_cls = mfields.DictField
+
+
+class DateTimeField(MongoSyncField):
+    mfield_cls = mfields.DateTimeField
+
+
+class EmailField(MongoSyncField):
+    mfield_cls = mfields.EmailField
+
+
+class URLField(MongoSyncField):
+    mfield_cls = mfields.URLField
+
+
+class BooleanField(MongoSyncField):
+    mfield_cls = mfields.BooleanField
+
+
+class FileField(MongoSyncField):
+    mfield_cls = mfields.FileField
+
+
+class ImageField(MongoSyncField):
+    mfield_cls = mfields.ImageField
