@@ -203,6 +203,9 @@ def m2m_post_add(_, parent_sync_cls=None, sfield=None, pk_set=None, model=None, 
     documents = [sync_cls.create_document(model_instance, with_embedded=True)
                  for model_instance in model_instances]
 
+    if not documents:
+        return
+
     with BatchQuery(parent_sync_cls) as b:
         b[instance] = QSCreate(sync_cls=parent_sync_cls, documents=documents, sfield=sfield)
 
