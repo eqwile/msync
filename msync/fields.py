@@ -103,8 +103,8 @@ class BaseField(object):
         return '%s.%s' % (self.sync_cls.__name__, self.name)
 
     def __getstate__(self):
-        # эти поля обычно являются динамическими и для сериализации не подходят
-        not_pickle = ('_bulk_source', 'mfield')
+        # Эти поля обычно являются динамическими и для сериализации не подходят.
+        not_pickle = ('_bulk_source', 'mfield', 'is_belongs')
         return dict((k, v) for (k, v) in self.__dict__.iteritems() if k not in not_pickle)
 
 
