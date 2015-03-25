@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+import time
 import operator
 from collections import defaultdict
 from .factories import DocumentFactory
@@ -189,7 +191,9 @@ class BatchQuery(object):
             qs_path = qs.get_path()
             pk_path = dict(pk_path)
             print('{}.filter({}).update({})'.format(self._sync_cls, pk_path, qs_path))
+            start_time = time.time()
             self._sync_cls._meta.document.objects.filter(**pk_path).update(**qs_path)
+            print("--- %s seconds ---" % (time.time() - start_time))
 
     def __setitem__(self, key, qs):
         key = self._get_key(key)
