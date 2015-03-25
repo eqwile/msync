@@ -23,6 +23,9 @@ class SignalConnector(object):
 
     def setup(self):
         for model in self.parent_meta.get_all_own_models():
+            if model is None:
+                continue
+
             self.connect_signal(signals.post_save, self._post_save_handler, model)
             self.connect_signal(signals.post_delete, self._post_delete_handler, model)
 
