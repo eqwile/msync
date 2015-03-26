@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+from __future__ import unicode_literals
+import six
+from six.moves import reduce
 import time
 import operator
 from collections import defaultdict
@@ -24,7 +27,7 @@ class BatchQuery(object):
         self.run()
 
     def run(self):
-        for pk_path, qss in self._qs_collection.items():
+        for pk_path, qss in six.iteritems(self._qs_collection):
             qs = reduce(operator.or_, qss)
             qs_path = qs.get_path()
             pk_path = dict(pk_path)
@@ -44,7 +47,7 @@ class BatchQuery(object):
             ins, sfield = k, None
 
         pk_path = QSPk(sync_cls=self._sync_cls, instance=ins, sfield=sfield).get_path()
-        return frozenset(pk_path.items())
+        return frozenset(six.iteritems(pk_path))
 
 
 class BatchTask(object):

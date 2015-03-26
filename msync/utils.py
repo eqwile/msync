@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
+from __future__ import unicode_literals
 import types
 import collections
-from functools import wraps
+import six
 from contextlib import contextmanager
 from django.core.paginator import Paginator
 from bson import ObjectId
@@ -77,7 +78,7 @@ def do_bulk_insert_of_sync_cls(sync_cls, per_page=1000):
 
 
 def with_disabled_msync(f):
-    @wraps(f)
+    @six.wraps(f)
     def wrapped(*args, **kwargs):
         with disabled_msync():
             return f(*args, **kwargs)

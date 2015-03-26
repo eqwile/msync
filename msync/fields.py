@@ -16,6 +16,7 @@
           field = SyncField(mfield=IntField(), depends_on=FooModel, source=source, 
                             reverse_rel=reverse_func)
 """
+from __future__ import unicode_literals
 from collections import defaultdict
 import six
 from django.db import models
@@ -106,7 +107,7 @@ class BaseField(object):
     def __getstate__(self):
         # Эти поля обычно являются динамическими и для сериализации не подходят.
         not_pickle = ('_bulk_source', 'mfield', 'is_belongs')
-        return dict((k, v) for (k, v) in self.__dict__.iteritems() if k not in not_pickle)
+        return dict((k, v) for (k, v) in six.iteritems(self.__dict__) if k not in not_pickle)
 
 
 class SyncField(BaseField):

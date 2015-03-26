@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from __future__ import unicode_literals
 from .factories import DocumentFactory
 
 
@@ -161,4 +162,4 @@ class QSDelete(QSBase):
                       sfield=self._sfield).get_path()
         else:
             pk = QSPk(sync_cls=self._sync_cls, sfield=self._sfield).get_path()
-        return {op + self.delim + k: v for k, v in pk.items()}
+        return {op + self.delim + k: v for k, v in six.iteritems(pk)}

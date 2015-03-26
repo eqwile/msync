@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from __future__ import unicode_literals
 import six
 from mongoengine import document
 from .options import Options
@@ -37,7 +38,7 @@ class SyncMC(type):
         new_class._meta = meta
 
         # contribute to class
-        for obj_name, obj in attrs.items():
+        for obj_name, obj in six.iteritems(attrs):
             new_class.add_to_class(obj_name, obj)
 
         # generate sync sfields from model fields

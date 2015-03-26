@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from __future__ import unicode_literals
 from functools import partial
 from django.db.models import signals
 from .queryset import QSUpdate, QSUpdateDependentField, QSUpdateParent, QSPk, QSClear, QSDelete, QSCreate
@@ -230,6 +231,6 @@ def _pickle_method(m):
         return getattr, (m.im_self, m.im_func.func_name)
 
 
-import copy_reg
+from six.moves import copyreg
 import types
-copy_reg.pickle(types.MethodType, _pickle_method)
+copyreg.pickle(types.MethodType, _pickle_method)
