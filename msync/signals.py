@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 from functools import partial
 from django.db.models import signals
-from .queryset import (BatchQuery, QSUpdate, QSUpdateDependentField, QSUpdateParent, QSPk, QSClear,
-                       QSDelete, QSCreate, BatchTask)
+from .queryset import QSUpdate, QSUpdateDependentField, QSUpdateParent, QSPk, QSClear, QSDelete, QSCreate
+from .batches import BatchTask, BatchQuery
 
 
 class SignalConnector(object):

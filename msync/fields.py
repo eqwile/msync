@@ -17,6 +17,7 @@
                             reverse_rel=reverse_func)
 """
 from collections import defaultdict
+import six
 from django.db import models
 from mongoengine import fields as mfields
 from mongoengine.queryset import DO_NOTHING
@@ -62,7 +63,7 @@ class BaseField(object):
     def get_source(self):
         if hasattr(self._source, '__call__'):
             return self._source
-        elif isinstance(self._source, basestring):
+        elif isinstance(self._source, six.string_types):
             return lambda sfield, instance: get_from_source(instance, sfield._source)
         else:
             return None
@@ -78,7 +79,7 @@ class BaseField(object):
     def get_reverse_rel(self):
         if hasattr(self._reverse_rel, '__call__'):
             return self._reverse_rel
-        elif isinstance(self._reverse_rel, basestring):
+        elif isinstance(self._reverse_rel, six.string_types):
             def rev_rel(instance):
                 parents = get_from_source(instance, self._reverse_rel)
                 try:

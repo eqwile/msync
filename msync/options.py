@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from collections import defaultdict
+import six
 from django.db.models.fields import FieldDoesNotExist
 from .factories import SyncFieldFactory
 from .utils import Tree
@@ -84,7 +85,7 @@ class Options(object):
     def _normalize_meta_fields(self, fields):
         norm_fields = []
         for field in fields:
-            if isinstance(field, basestring):
+            if isinstance(field, six.string_types):
                 norm_fields.append((field, field))
             elif isinstance(field, (tuple, list)) and len(field) == 2:
                 norm_fields.append(field)
@@ -240,7 +241,7 @@ class SyncTree(object):
             self._pr(k, self._tree[k], 0)
 
     def _pr(self, name, tree, offset):
-        print '%s%s(%s)' % (' ' * offset, name, hash(name))
+        print('%s%s(%s)' % (' ' * offset, name, hash(name)))
         for k in tree:
             self._pr(k, tree[k], offset + 4)
 

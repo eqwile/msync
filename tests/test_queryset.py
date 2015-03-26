@@ -1,6 +1,7 @@
 from mock import Mock, MagicMock, call
 from msync.queryset import (QSPk, QSUpdate, QSUpdateParent, QSUpdateDependentField, QSClear, QSCreate,
-                            QSDelete, BatchQuery, QSBase)
+                            QSDelete, QSBase)
+from msync.batches import BatchQuery
 from .utils import NP, DbSetup
 
 

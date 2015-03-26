@@ -72,7 +72,7 @@ def do_bulk_insert_of_sync_cls(sync_cls, per_page=1000):
         page = p.page(i)
         documents = sync_cls.bulk_create_documents(page.object_list)
         if documents:
-            print '%s: %s' % (model, len(documents))
+            print('%s: %s' % (model, len(documents)))
             document.objects.insert(documents.values())
 
 
@@ -86,7 +86,7 @@ def with_disabled_msync(f):
 
 @contextmanager
 def disabled_msync():
-    from .queryset import BatchQuery, BatchTask
+    from .batches import BatchQuery, BatchTask
     old_bq, old_bt = BatchQuery.run, BatchTask.run
     new_run = lambda self: None
     BatchQuery.run = new_run
