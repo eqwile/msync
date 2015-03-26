@@ -23,7 +23,7 @@ class BatchQuery(object):
         return self
 
     def __exit__(self, t, value, traceback):
-        print()
+        print('')
         self.run()
 
     def run(self):
