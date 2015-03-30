@@ -23,7 +23,7 @@ class BatchQuery(object):
         return self
 
     def __exit__(self, t, value, traceback):
-        print('')
+        # print('')
         self.run()
 
     def run(self):
@@ -31,10 +31,10 @@ class BatchQuery(object):
             qs = reduce(operator.or_, qss)
             qs_path = qs.get_path()
             pk_path = dict(pk_path)
-            print('{}.filter({}).update({})'.format(self._sync_cls, pk_path, qs_path))
+            # print('{}.filter({}).update({})'.format(self._sync_cls, pk_path, qs_path))
             start_time = time.time()
             self._sync_cls._meta.document.objects.filter(**pk_path).update(**qs_path)
-            print("--- %s seconds ---" % (time.time() - start_time))
+            # print("--- %s seconds ---" % (time.time() - start_time))
 
     def __setitem__(self, key, qs):
         key = self._get_key(key)

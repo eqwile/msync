@@ -178,7 +178,7 @@ def save_dependent_sfield(batch, parent_sync_cls=None, sfield=None, instance=Non
 def save_parent_sfields(batch, parent_sync_cls=None, instance=None, created=None):
     document = parent_sync_cls.create_document(instance, with_embedded=created)
     if created:
-        print('{}.save()'.format(parent_sync_cls))
+        # print('{}.save()'.format(parent_sync_cls))
         document.save()
     else:
         batch[instance] = QSUpdateParent(sync_cls=parent_sync_cls, document=document)
@@ -196,7 +196,7 @@ def delete_dependent_sfield(batch, parent_sync_cls=None, instance=None, sfield=N
 
 def delete_parent(_, parent_sync_cls=None, parent_meta=None, instance=None):
     pk_path = QSPk(sync_cls=parent_sync_cls, instance=instance).get_path()
-    print('{}.filter({}).delete()'.format(parent_sync_cls, pk_path))
+    # print('{}.filter({}).delete()'.format(parent_sync_cls, pk_path))
     parent_meta.document.objects.filter(**pk_path).delete()
 
 
