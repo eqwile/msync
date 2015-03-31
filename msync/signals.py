@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
-import logger
+import logging
 from functools import partial
 from django.db.models import signals
 from .queryset import QSUpdate, QSUpdateDependentField, QSUpdateParent, QSPk, QSClear, QSDelete, QSCreate
