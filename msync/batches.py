@@ -41,7 +41,8 @@ class BatchQuery(object):
                 updated_number = self._sync_cls._meta.document.objects.filter(**pk_path).update(**qs_path)
 
             if updated_number == 0 and self.is_instance_of_parent(pk.instance):
-                logger.warning('%s is not in mongo. Saving to %s.' % (pk.instance, self._sync_cls))
+                logger.warning('%s with path %s is not in mongo. Saving to %s.' % (
+                    pk.instance.__class__, pk_path, self._sync_cls))
                 self._sync_cls.create_document(pk.instance, with_embedded=True).save()
 
     def is_instance_of_parent(self, instance):
