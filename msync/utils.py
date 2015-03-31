@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
+import time
 import types
 import collections
 import six
@@ -95,3 +96,11 @@ def disabled_msync():
     yield
     BatchQuery.run = old_bq
     BatchTask.run = old_bt
+
+
+@contextmanager
+def measure_time():
+    start = time.time()
+    yield
+    end = time.time()
+    print("--- %s seconds ---" % (end - start))

@@ -2,11 +2,16 @@
 from __future__ import unicode_literals
 import six
 from six.moves import reduce
+import logging
 import time
 import operator
 from collections import defaultdict
 from .queryset import QSPk
 from .tasks import sync_task
+from .utils import measure_time
+
+
+logger = logging.getLogger(__name__)
 
 
 class BatchQuery(object):
@@ -23,31 +28,38 @@ class BatchQuery(object):
         return self
 
     def __exit__(self, t, value, traceback):
-        # print('')
+        print('')
         self.run()
 
     def run(self):
-        for pk_path, qss in six.iteritems(self._qs_collection):
+        for pk, qss in six.iteritems(self._qs_collection):
             qs = reduce(operator.or_, qss)
             qs_path = qs.get_path()
-            pk_path = dict(pk_path)
-            # print('{}.filter({}).update({})'.format(self._sync_cls, pk_path, qs_path))
-            start_time = time.time()
-            self._sync_cls._meta.document.objects.filter(**pk_path).update(**qs_path)
-            # print("--- %s seconds ---" % (time.time() - start_time))
+            pk_path = pk.get_path()
+
+            print('{}.filter({}).update({})'.format(self._sync_cls, pk_path, qs_path))
+            with measure_time():
+                updated_number = self._sync_cls._meta.document.objects.filter(**pk_path).update(**qs_path)
+
+            if updated_number == 0 and self.is_instance_of_parent(pk.instance):
+                logger.warning('%s is not in mongo. Saving to %s.' % (pk.instance, self._sync_cls))
+                self._sync_cls.create_document(pk.instance, with_embedded=True).save()
+
+    def is_instance_of_parent(self, instance):
+        model = self._sync_cls._meta.model
+        return model is not None and isinstance(instance, model)
 
     def __setitem__(self, key, qs):
-        key = self._get_key(key)
-        self._qs_collection[key].append(qs)
+        pk = self._get_pk(key)
+        self._qs_collection[pk].append(qs)
 
-    def _get_key(self, k):
+    def _get_pk(self, k):
         try:
             ins, sfield = k
         except TypeError:
             ins, sfield = k, None
 
-        pk_path = QSPk(sync_cls=self._sync_cls, instance=ins, sfield=sfield).get_path()
-        return frozenset(six.iteritems(pk_path))
+        return QSPk(sync_cls=self._sync_cls, instance=ins, sfield=sfield)
 
 
 class BatchTask(object):
