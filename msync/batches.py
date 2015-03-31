@@ -28,7 +28,6 @@ class BatchQuery(object):
         return self
 
     def __exit__(self, t, value, traceback):
-        print('')
         self.run()
 
     def run(self):
@@ -37,7 +36,7 @@ class BatchQuery(object):
             qs_path = qs.get_path()
             pk_path = pk.get_path()
 
-            print('{}.filter({}).update({})'.format(self._sync_cls, pk_path, qs_path))
+            logger.info('{}.filter({}).update({})'.format(self._sync_cls, pk_path, qs_path))
             with measure_time():
                 updated_number = self._sync_cls._meta.document.objects.filter(**pk_path).update(**qs_path)
 
