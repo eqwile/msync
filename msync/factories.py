@@ -62,7 +62,7 @@ class DocumentFieldFactory(object):
         models.DecimalField: mfields.DecimalField,
         models.EmailField: mfields.EmailField,
         models.CharField: mfields.StringField,
-        models.URLField: mfields.URLField,
+        models.URLField: mfields.StringField,
         models.SlugField: mfields.StringField,
         models.TextField: mfields.StringField,
         models.CommaSeparatedIntegerField: mfields.StringField,
