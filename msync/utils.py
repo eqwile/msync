@@ -1,12 +1,17 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
+import time
 import types
 import collections
 import six
+import logging
 from contextlib import contextmanager
 from django.core.paginator import Paginator
 from bson import ObjectId
 from mongoengine.queryset import QuerySet, QuerySetManager, queryset_manager as qm
+
+
+logger = logging.getLogger(__name__)
 
 
 def Tree():
@@ -95,3 +100,11 @@ def disabled_msync():
     yield
     BatchQuery.run = old_bq
     BatchTask.run = old_bt
+
+
+@contextmanager
+def measure_time():
+    start = time.time()
+    yield
+    end = time.time()
+    logger.info("--- %s seconds ---" % (end - start))

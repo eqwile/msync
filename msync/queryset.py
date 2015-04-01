@@ -19,6 +19,10 @@ class QSBase(object):
             self._path = self._get_path()
         return self._path
 
+    @property
+    def instance(self):
+        return self._instance
+
     def _get_path(self):
         return {}
 
@@ -30,6 +34,13 @@ class QSBase(object):
         other_path = other.get_path()
         path.update(other_path)
         return QSBase(sync_cls=self._sync_cls, document=self._document, sfield=self._sfield, path=path)
+
+    def __hash__(self):
+        path = self.get_path()
+        return hash(frozenset(six.iteritems(path)))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.get_path() == other.get_path()
 
 
 class QSPk(QSBase):

@@ -1,7 +1,7 @@
-from mock import Mock, MagicMock, call
+# -*- coding: utf-8 -*-
+from mock import Mock
 from msync.queryset import (QSPk, QSUpdate, QSUpdateParent, QSUpdateDependentField, QSClear, QSCreate,
                             QSDelete, QSBase)
-from msync.batches import BatchQuery
 from .utils import NP, DbSetup
 
 
@@ -24,6 +24,16 @@ class TestQSPk(DbSetup):
     def test_pass_no_pk_and_no_instance(self):
         pk_path = QSPk(sync_cls=self.sync_cls, sfield=self.sync_cls.emb_field).get_path()
         assert pk_path == {'emb_field': None}
+
+    def test_hash(self):
+        npk = lambda i: QSPk(sync_cls=self.sync_cls, pk=i)
+        assert hash(npk(4)) == hash(npk(4))
+        assert hash(npk(4)) != hash(npk(8))
+
+    def test_eq(self):
+        npk = lambda i: QSPk(sync_cls=self.sync_cls, pk=i)
+        assert npk(4) == npk(4)
+        assert npk(4) != npk(8)
 
 
 class TestQSUpdate(DbSetup):
@@ -61,7 +71,7 @@ class TestQSClear(DbSetup):
         instance = NP(self.bar)
         path = QSClear(sync_cls=self.sync_cls, sfield=self.sync_cls.m2m_field, instance=instance).get_path()
         assert path == {'set__m2m_field': []}
-        
+
 
 class TestQSCreate(DbSetup):
     def test_m2m_adding(self):
@@ -83,7 +93,7 @@ class TestQSDelete(DbSetup):
     def test_m2m_deleting(self):
         instance = NP(self.bar)
         path = QSDelete(sync_cls=self.sync_cls, sfield=self.sync_cls.m2m_field, instance=instance).get_path()
-        assert path == {'pull__m2m_field__id': instance.id}
+        assert path == {'pull__m2m_field': None}
 
     def test_m2m_many_deleting(self):
         ins1, ins2 = NP(self.bar), NP(self.bar)
@@ -91,7 +101,7 @@ class TestQSDelete(DbSetup):
                         pks=[ins1.pk, ins2.pk]).get_path()
         assert path == {'pull_all__m2m_field__id': [ins1.pk, ins2.pk]}
 
-    def test_m2m_deleting(self):
+    def test_m2m_deleting2(self):
         path = QSDelete(sync_cls=self.sync_cls, sfield=self.sync_cls.m2m_field, pk=15).get_path()
         assert path == {'pull__m2m_field__id': 15}
 
@@ -119,53 +129,3 @@ class TestQSBase(DbSetup):
 
         qs = qs1 | qs2
         assert qs.get_path() == {'key1': 15, 'key2': 16, 'key3': 23, 'key4': 42}
-
-
-class TestBatchQuery(DbSetup):
-    def setup(self):
-        super(TestBatchQuery, self).setup()
-        self.sync_cls._meta.document = Mock()
-        self.filter_mock = self.sync_cls._meta.document.objects.filter
-        self.batch = BatchQuery(self.sync_cls)
-
-    def test_saving_dependent_fields_of_same_parent(self):
-        pi = NP(self.model, id=4)
-        ins = NP(self.bar)
-        qs1 = QSUpdateDependentField(instance=ins, sync_cls=self.sync_cls, sfield=self.sync_cls.dep_field)
-        qs2 = QSUpdateDependentField(instance=ins, sync_cls=self.sync_cls, sfield=self.sync_cls.dep_field2)
-
-        self.batch[pi] = qs1
-        self.batch[pi] = qs2
-
-        self.batch.run()
-        self.filter_mock.assert_called_once_with(id=4)
-
-    def test_saving_nested_field_with_dependent(self):
-        pi = NP(self.model, id=8)
-        ins = NP(self.bar, id=15)
-        ins_document = self.bar_sync.create_document(ins)
-
-        qs1 = QSUpdate(sync_cls=self.sync_cls, document=ins_document, sfield=self.sync_cls.m2m_field)
-        self.batch[(ins, self.sync_cls.m2m_field)] = qs1
-        
-        qs2 = QSUpdateDependentField(instance=ins, sync_cls=self.sync_cls, sfield=self.sync_cls.dep_field)
-        self.batch[pi] = qs2
-
-        self.batch.run()
-        assert self.filter_mock.call_count == 2
-        self.filter_mock.assert_has_calls([call(m2m_field__id=15), call(id=8)], any_order=True)
-        
-
-    def test_saving_new_nested_field_with_dependent(self):
-        pi = NP(self.model, id=16)
-        ins = NP(self.bar, id=23)
-        ins_document = self.bar_sync.create_document(ins)
-
-        qs1 = QSUpdate(sync_cls=self.sync_cls, document=ins_document, sfield=self.sync_cls.m2m_field)
-        self.batch[pi] = qs1
-        
-        qs2 = QSUpdateDependentField(instance=ins, sync_cls=self.sync_cls, sfield=self.sync_cls.dep_field)
-        self.batch[pi] = qs2
-
-        self.batch.run()
-        self.filter_mock.assert_called_once_with(id=16)
