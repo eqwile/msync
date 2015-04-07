@@ -81,4 +81,6 @@ class BatchTask(object):
         if not self._async_tasks:
             return
 
-        sync_task.delay(self._sync_cls, self._async_tasks)
+        logger.warning(u'%s, %s' % (self._sync_cls, self._async_tasks[0].func))
+        res = sync_task.delay(self._sync_cls, self._async_tasks)
+        logger.warning(u'res: %s' % res)
