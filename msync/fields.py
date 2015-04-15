@@ -5,7 +5,7 @@
       Пример:
           field = SyncField(mfield=IntField(), source='model_field')
 
-    - Встроенные (embedded). Позволяют встраивать объекты в схемы документов и
+    - Встроенные, вложенный (embedded). Позволяют встраивать объекты в схемы документов и
       принимают в качестве аргумента класс EmbeddedSync для задания схемы этого объекта.
       Пример:
           field = EmbeddedField(FooEmbeddedSync, source='foo')
@@ -26,9 +26,40 @@ from .utils import get_from_source
 
 
 class BaseField(object):
+    """Базовый класс для все полей"""
+
     def __init__(self, mfield, source=None, sync_cls=None, primary=False, reverse_rel=None,
                  depends_on=None, bulk_source=None, is_belongs=None, name=None, parent_sync_cls=None,
                  async=None):
+        """
+        Инициализирует поле.
+
+        :param mfield: поле mongoengine, которое нужно использовать при генерации 
+        документа
+        :param source: строка или функция, с помощью которой получается значение
+        из инстанса джанговской модельки для соответствующего поля
+        :param bulk_source: функция, с помощью которой идет получение значений этого
+        поля для списка инстансов parent_sync_cls._meta.model. Функция принимает
+        список инстансов и возвращает словарь следующего вида: {instance1: document1, ...}
+        :param sync_cls: если поле является вложенным (embedded), то это поле содержит
+        класс, который определяет структуру вложенного объекта
+        :param parent_sync_cls: sync класс, в котором определено это поле. Обычно этот 
+        параметр добавляется автоматически в функции contribute_to_class
+        :param primary: является ли поле primary ключом
+        :param reverse_rel: строка или функция, с помощью которой получаются объекты
+        этого поля из инстанса parent_sync_cls._meta.model
+        :param depends_on: если класс является зависимым, то этот параметр является
+        моделькой, от которой зависит это поле и сигналы которой подключаются
+        :param is_belongs: функция с сигнатурой: SyncField -> django.db.models.Model -> Bool
+        Нужна для фильтрации объектов. Пример: 
+             liked_users = ListField(..., is_belongs=is_like_belongs, depends_on=Like, ...)
+        Здесь определяется поле со списком юзеров, которые лайкнули именно инстанс 
+        модельки parent_sync_cls._meta.model. Обычно is_belongs используется вместе с
+        depens_on параметром. Этот параметр очень полезен для моделек, от которых зависит 
+        поле, где есть content type поля.
+        :param name: название поля, добавляется в contribute_to_class
+        :param async: должно ли обновляться это поле ассинхронно
+        """
         self.mfield = mfield
         self._source = source
         self._bulk_source = bulk_source
@@ -113,19 +144,29 @@ class BaseField(object):
 class SyncField(BaseField):
 
     def is_nested(self):
-        """Nested means it contains embedded sync"""
+        """
+        Поле называется вложенным, если оно хранит вложенные объекты
+        """
         return self.nested_sync_cls is not None
 
     def get_nested_sync_cls(self):
         return self.nested_sync_cls
 
     def is_depens_on(self):
+        """
+        Поле называется зависимым, если была определена моделька, 
+        от которой зависит это поле
+        """
         return self.depends_on is not None
 
     def get_depends_on_model(self):
         return self.depends_on
 
     def is_model_sfield(self):
+        """
+        Поле называется простым или полем модельки, если оно не 
+        является ни вложенным, ни зависимым
+        """
         return not self.is_nested() and not self.is_depens_on()
 
     def is_belongs_to_parent(self, instance):
@@ -133,6 +174,8 @@ class SyncField(BaseField):
             return self.is_belongs(self, instance)
         return True
 
+    # следующие функции используются при построении запросов к монге
+    # через mongoengine. Для каждого типа поля они могут различаться
     def update_query_path(self):
         return self.name
 
@@ -144,7 +187,19 @@ class SyncField(BaseField):
 
 
 class EmbeddedField(SyncField):
+    """
+    Используется при определении встроенного объекта в документе:
+        class ReviewSync(DocumentSync):
+            ...
+            user = EmbeddedField(UserSync, ...)
+            ...
+    """
+
     def __init__(self, sync_cls, **kwargs):
+        """
+        :param sync_cls: embedded sync класс, который определяет структуру
+        вложенного объекта
+        """
         self.meta = sync_cls._meta
         mfield = mfields.EmbeddedDocumentField(self.meta.document)
         super(EmbeddedField, self).__init__(mfield, sync_cls=sync_cls, **kwargs)
@@ -160,7 +215,25 @@ class EmbeddedField(SyncField):
 
 
 class ListField(SyncField):
+    """
+    Используется при определении списковых полей:
+        class BookSync(DocumentSync):
+            ...
+            authors = ListField(sfield=EmbeddedField(AuthorSync), ...)
+            ...
+    """
+
     def __init__(self, mfield=None, sfield=None, ordering=None, reverse=False, **kwargs):
+        """
+        Принимает либо поле из mongoengine, либо sync поле
+
+        :params mfield: поле из mongoengine, который определяет тип данных,
+        хранящихся в этом списке
+        :params sfield: embedded sync поле, т.е. список содержит объекты
+        данной структуры
+        :params ordering: нужно ли сортировать список
+        :params reverse: в каком порядке сортировать
+        """
         nested_mfield, sync_cls = mfield, None
         if mfield is None:
             nested_mfield = sfield.get_mfield()
@@ -204,16 +277,25 @@ class ListField(SyncField):
 
 
 class ReferenceField(SyncField):
+    """
+    Для определения ссылочных полей
+    """
     def __init__(self, sync_cls, reverse_delete_rule=DO_NOTHING, **kwargs):
         self.ref_sync_cls = sync_cls
         mfield = mfields.ReferenceField(sync_cls._meta.document, reverse_delete_rule=reverse_delete_rule)
         super(ReferenceField, self).__init__(mfield=mfield, **kwargs)
 
+    # FIXME: этой какой-то хак и хз где именно используется
     def is_model_sfield(self):
         return False
 
 
 class EmbeddedForeignField(EmbeddedField):
+    """
+    Обычно для синхронизации полей ForeignKey параметр bulk_source один и тот же,
+    поэтому выделил в отдельный класс
+    """
+
     def __init__(self, sync_cls, bulk_source=None, *args, **kwargs):
         bs = bulk_source if bulk_source is not None else self._bulk_foreign_key
         self.__model = sync_cls._meta.model

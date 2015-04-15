@@ -8,6 +8,9 @@ from .signals import SignalConnector
 
 
 class SyncMC(type):
+    """
+    Метакласс для всех sync классов
+    """
     def __new__(cls, name, bases, attrs):
         super_new = super(SyncMC, cls).__new__
 

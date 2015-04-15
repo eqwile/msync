@@ -206,7 +206,7 @@ class Options(object):
         return d
 
     def get_simple_sfields(self):
-        return [sfield for sfield in self.sfields if not sfield.is_nested() and not sfield.is_depens_on()]
+        return [sfield for sfield in self.sfields if sfield.is_model_sfield()]
 
     def get_sync_tree(self):
         if self.sync_tree is None:
