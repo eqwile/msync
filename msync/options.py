@@ -8,36 +8,80 @@ from .utils import Tree
 
 
 class Options(object):
+    """
+    При инициализации sync класса, идет создание мета объекта для него: SomeSync._meta
+    Этот мета объект является инстансом этого класса. Здесь хранится много чего 
+    интересного про этот sync класс.
+    
+    Определение некоторых параметров самого sync класса и документа mongoengine,
+    через который идет дальнейшее общение с монгой, производится через Meta класс:
+        class SomeSync(DocumentSync):
+            # Здесь определяем поля
+            class Meta:
+                # Здесь настраиваем этот класс
+    Все как в django-orm.
+
+    Все метода и поля, которые содержат в названии слово `own`, хранят только
+    собственные данные, без родительских данных. Здесь данными могут быть
+    поля итп.
+    """
+
+    # Это настройки, которые потом добавляются в генерируемый mongoengine документ
     _collection_setting_keys = ('allow_inheritance', 'collection', 'id_field', 'max_documents',
                                 'max_size', 'indexes', 'index_options', 'index_background',
                                 'index_drop_dups', 'index_cls', 'ordering', 'shard_key', 'abstract',
                                 'queryset_class', 'auto_create_index')
 
     def __init__(self, sync_cls, meta, sync_bases, document_type=None):
+        """
+        :params sync_cls: sync класс, для которого создается мета объект
+        :params meta: класс Meta, определенный внутри sync класса
+        :params sync_bases: от кого мы наследуем
+        :params document_type: тип mongoengine документа
+        """
         self._sync_cls = sync_cls
 
+        # Моделька django-orm, сигналы которой будут слушаться для обновления
+        # соответствующих документов в коллекции
         self.model = getattr(meta, 'model', None)
+        # Можно фильтровать объекты из модельки, например, по content type
         self.filter = getattr(meta, 'filter', None)
+        # Поля, которые нужно исключить из документа. Но лучше явно определять поля.
+        # Exclude полезно использовать при наследовании sync классов
         self.exclude = getattr(meta, 'exclude', tuple())
+        # Явное определении полей, которые нужно будет включить в документ и
+        # обновлять в монге
         self.fields = getattr(meta, 'fields', None)
+        # Нужно ли обновлять любое поле в документе ассинхронно.
+        # Также можно определять это поведение только для определенных полей
         self.async = getattr(meta, 'async', False)
         self._field_names = self._get_field_names_from_meta_fields()
 
-        self.document_type = document_type
+        # Здесь будет храниться сгенерируемый mongoengine документ, через
+        # который будем общаться с монгой
         self.document = None
+        self.document_type = document_type
 
-        # TODO: later implement caching by decorator
+        # FIXME: может как-то можно будет избавиться от списка self._sfields
+        # и использовать только self._sfields_dict?
+        # Список полей sync класса
         self._sfields = []
         self._sfields_dict = {}
+        # TODO: later implement caching by decorator
         self.__sfields_cache = None
         self.__sfields_dict_cache = None
 
+        # Это поле хранит primary поле
         self._pk_sfield = None
         self.__pk_sfield_cache = None
 
+        # QuerySet менеджеры. Менеджеры можно определять в sync классах через
+        # декораторы msync.utils.queryset_manager
         self._qs_managers = {}
 
+        # Если идет наследование, то корнем sync_tree является родительский класс
         self.sync_tree = None
+        # В own_sync_tree хранится дерево с корнем в этом классе
         self.own_sync_tree = None
         self.collection_settings = self.get_collection_settings(meta)
         self.bases = self._get_sync_bases(sync_bases)
@@ -64,6 +108,10 @@ class Options(object):
         return {key: getattr(meta_cls, key) for key in self._collection_setting_keys if hasattr(meta_cls, key)}
 
     def _add_model_fields(self):
+        """
+        Функция предназначена для генерации полей, названия которых есть
+        в self.fields, но они не определены в самом sync классе
+        """
         if self.model is None:
             return []
 
@@ -223,6 +271,12 @@ class Options(object):
 
 
 class SyncTree(object):
+    """
+    Дерево вложенных полей.
+    При построении запросов к монге приходится искать путь к полю в sync классе.
+    Обычно здесь и используется дерево для поиска.
+    """
+    
     def __init__(self, sync_cls=None, sfields=None):
         if sync_cls is not None:
             sfields = sync_cls._meta.sfields

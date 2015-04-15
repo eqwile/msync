@@ -18,6 +18,7 @@ class SyncMC(type):
         if name == 'NewBase' and attrs == {}:
             return super_new(cls, name, bases, attrs)
 
+        # FIXME: we should not explicitly write here all basic sync classes
         if name in ('DocumentSync', 'EmbeddedSync', 'DynamicDocumentSync', 'DynamicEmbeddedSync'):
             return super_new(cls, name, bases, attrs)
 
@@ -32,6 +33,7 @@ class SyncMC(type):
         new_class = super_new(cls, name, bases, {'__module__': module})
 
         # check Meta class for existence
+        # TODO: maybe we can make sync class to be created without Meta?
         attr_meta = attrs.pop('Meta', None)
         if attr_meta is None:
             raise TypeError('%s: no Meta' % name)

@@ -14,7 +14,7 @@ class SignalConnector(object):
     def __init__(self, sync_cls):
         self.parent_sync_cls = sync_cls
         self.parent_meta = sync_cls._meta
-        # maybe here we can use only own sfields?
+        # FIXME: maybe here we can use only own sfields?
         self.nested_model_sfields_dict = self.parent_meta.get_nested_model_sfields_dict()
         self.depends_on_model_sfields_dict = self.parent_meta.get_depends_on_model_sfields_dict()
 
