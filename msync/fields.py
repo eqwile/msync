@@ -13,7 +13,7 @@
     - Зависимые (dependent). Принимают модельку от которой зависит значение поля,
       поэтому происходит подключение сигналов. Примером использования являются счетчики.
       Пример:
-          field = SyncField(mfield=IntField(), depends_on=FooModel, source=source, 
+          field = SyncField(mfield=IntField(), depends_on=FooModel, source=source,
                             reverse_rel=reverse_func)
 """
 from __future__ import unicode_literals
@@ -34,30 +34,40 @@ class BaseField(object):
         """
         Инициализирует поле.
 
-        :param mfield: поле mongoengine, которое нужно использовать при генерации 
+        :param mfield: поле mongoengine, которое нужно использовать при генерации
         документа
+
         :param source: строка или функция, с помощью которой получается значение
         из инстанса джанговской модельки для соответствующего поля
+
         :param bulk_source: функция, с помощью которой идет получение значений этого
         поля для списка инстансов parent_sync_cls._meta.model. Функция принимает
         список инстансов и возвращает словарь следующего вида: {instance1: document1, ...}
+
         :param sync_cls: если поле является вложенным (embedded), то это поле содержит
         класс, который определяет структуру вложенного объекта
-        :param parent_sync_cls: sync класс, в котором определено это поле. Обычно этот 
+
+        :param parent_sync_cls: sync класс, в котором определено это поле. Обычно этот
         параметр добавляется автоматически в функции contribute_to_class
+
         :param primary: является ли поле primary ключом
+
         :param reverse_rel: строка или функция, с помощью которой получаются объекты
         этого поля из инстанса parent_sync_cls._meta.model
+
         :param depends_on: если класс является зависимым, то этот параметр является
         моделькой, от которой зависит это поле и сигналы которой подключаются
+
         :param is_belongs: функция с сигнатурой: SyncField -> django.db.models.Model -> Bool
-        Нужна для фильтрации объектов. Пример: 
+        Нужна для фильтрации объектов. Пример:
              liked_users = ListField(..., is_belongs=is_like_belongs, depends_on=Like, ...)
-        Здесь определяется поле со списком юзеров, которые лайкнули именно инстанс 
+        Здесь определяется поле со списком юзеров, которые лайкнули именно инстанс
         модельки parent_sync_cls._meta.model. Обычно is_belongs используется вместе с
-        depens_on параметром. Этот параметр очень полезен для моделек, от которых зависит 
+        depens_on параметром. Этот параметр очень полезен для моделек, от которых зависит
         поле, где есть content type поля.
+
         :param name: название поля, добавляется в contribute_to_class
+
         :param async: должно ли обновляться это поле ассинхронно
         """
         self.mfield = mfield
@@ -154,7 +164,7 @@ class SyncField(BaseField):
 
     def is_depens_on(self):
         """
-        Поле называется зависимым, если была определена моделька, 
+        Поле называется зависимым, если была определена моделька,
         от которой зависит это поле
         """
         return self.depends_on is not None
@@ -164,7 +174,7 @@ class SyncField(BaseField):
 
     def is_model_sfield(self):
         """
-        Поле называется простым или полем модельки, если оно не 
+        Поле называется простым или полем модельки, если оно не
         является ни вложенным, ни зависимым
         """
         return not self.is_nested() and not self.is_depens_on()
@@ -229,8 +239,10 @@ class ListField(SyncField):
 
         :params mfield: поле из mongoengine, который определяет тип данных,
         хранящихся в этом списке
+
         :params sfield: embedded sync поле, т.е. список содержит объекты
         данной структуры
+
         :params ordering: нужно ли сортировать список
         :params reverse: в каком порядке сортировать
         """
@@ -313,7 +325,7 @@ class ListOfEmbeddedForeignRelatedObjectsField(ListField):
         self.__fk_field_name = None
         bs = bulk_source if bulk_source is not None else self._bulk_foreign_related_objects
         sf = sfield if sfield is not None else EmbeddedField(sync_cls)
-        super(ListEmbeddedForeignRelatedField, self).__init__(sfield=sf, bulk_source=bs, *args, **kwargs)
+        super(ListOfEmbeddedForeignRelatedObjectsField, self).__init__(sfield=sf, bulk_source=bs, *args, **kwargs)
 
     def _bulk_foreign_related_objects(self, instances):
         ins_dict = {ins.id: ins for ins in instances}

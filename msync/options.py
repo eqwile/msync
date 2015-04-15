@@ -10,9 +10,9 @@ from .utils import Tree
 class Options(object):
     """
     При инициализации sync класса, идет создание мета объекта для него: SomeSync._meta
-    Этот мета объект является инстансом этого класса. Здесь хранится много чего 
+    Этот мета объект является инстансом этого класса. Здесь хранится много чего
     интересного про этот sync класс.
-    
+
     Определение некоторых параметров самого sync класса и документа mongoengine,
     через который идет дальнейшее общение с монгой, производится через Meta класс:
         class SomeSync(DocumentSync):
@@ -276,7 +276,7 @@ class SyncTree(object):
     При построении запросов к монге приходится искать путь к полю в sync классе.
     Обычно здесь и используется дерево для поиска.
     """
-    
+
     def __init__(self, sync_cls=None, sfields=None):
         if sync_cls is not None:
             sfields = sync_cls._meta.sfields
@@ -316,7 +316,7 @@ class SyncTree(object):
                 path.insert(0, sf)
                 return path
         return []
-                
+
     def _create_tree(self, sfields):
         tree = Tree()
         for sfield in sfields:

@@ -11,6 +11,7 @@ class SyncMC(type):
     """
     Метакласс для всех sync классов
     """
+
     def __new__(cls, name, bases, attrs):
         super_new = super(SyncMC, cls).__new__
 
@@ -76,7 +77,7 @@ class SyncBase(six.with_metaclass(SyncMC)):
     def create_document(cls, instance, with_embedded=False):
         """
         Создает документ на основе объекта класса cls._meta.model
-        
+
         :param instance: объект класса cls._meta.model
         :param with_embedded: заполнить встроенные объекты в документе
         :returns document: возвращает документ класса cls._meta.document
@@ -92,7 +93,7 @@ class SyncBase(six.with_metaclass(SyncMC)):
         параметра with_embedded.
 
         :param instances: список объектов класса cls._meta.model
-        :returns dict: возвращает словарь, где ключами являются 
+        :returns dict: возвращает словарь, где ключами являются
         объекты из списка instances, а значениями - документы:
         {instance: document, ...}
         """
@@ -102,7 +103,7 @@ class SyncBase(six.with_metaclass(SyncMC)):
     @classmethod
     def connect_signals(cls):
         """
-        Подключает сигналы для sync-классов, которые наследуют 
+        Подключает сигналы для sync-классов, которые наследуют
         DocumentSync и DynamicDocumentSync. У встроенных sync'ов
         подключение не происходит, т.к. они обновляются через
         классы, в которые они встроены
@@ -116,7 +117,7 @@ class SyncBase(six.with_metaclass(SyncMC)):
         """
         Проверяет на существование поля у класса.
         Используется в сигналах для фильтрования объектов,
-        которые не нужно обновлять, т.к. нет такого поля 
+        которые не нужно обновлять, т.к. нет такого поля
         в монге
         """
         return field in cls._meta.sfields_dict
@@ -151,7 +152,7 @@ class DynamicDocumentSync(DocumentSync):
     Имеет те же свойства, что и DocumentSync, с одним
     дополнительным: в запросах к базе можно использовать
     любые поля. Хотя DynamicDocument обладает еще другими
-    свойствами, но на данный момент мы используем этот 
+    свойствами, но на данный момент мы используем этот
     sync только из-за динамических полей в запросах
     """
     document_type = document.DynamicDocument
@@ -159,7 +160,7 @@ class DynamicDocumentSync(DocumentSync):
 
 class DynamicEmbeddedSync(EmbeddedSync):
     """
-    Добавил только из-за того, чтобы документ 
+    Добавил только из-за того, чтобы документ
     DynamicEmbeddedDocument из mongoengine не пропал :)
     """
     document_type = document.DynamicEmbeddedDocument

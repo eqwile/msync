@@ -8,7 +8,7 @@ import logging
 from contextlib import contextmanager
 from django.core.paginator import Paginator
 from bson import ObjectId
-from mongoengine.queryset import QuerySet, QuerySetManager, queryset_manager as qm
+from mongoengine.queryset import QuerySet, queryset_manager as qm
 
 
 logger = logging.getLogger(__name__)
@@ -27,6 +27,9 @@ def islist(obj):
 
 
 def to_dict(document):
+    """
+    Удаляет ObjectId и _cls поля и переводит документ в словарь
+    """
     remove_fields = ['_cls']
     m = document.to_mongo()
     return {field: m[field] for field in m
@@ -38,11 +41,16 @@ def to_dicts(documents):
 
 
 class DefaultQuerySet(QuerySet):
+    """
+    Является QuerySet'ом по умолчанию у сгенерированных документов
+    для sync классов
+    """
     def to_dicts(self):
         return [document.to_dict() for document in self]
 
 
 def get_from_source(instance, source_str):
+    """Используется в полях для работы с source параметром"""
     source_parts = source_str.split('.')
     source = instance
     for part in source_parts:
@@ -64,12 +72,20 @@ def _qs_manager_contribute(self, sync_cls, name):
 
 
 def queryset_manager(func):
+    """
+    Добавляет кастомный менеджер в sync класс, который потом определяется
+    в mongoengine документе
+    """
     manager = qm(func)
     manager.contribute_to_class = types.MethodType(_qs_manager_contribute, manager)
     return manager
 
 
 def do_bulk_insert_of_sync_cls(sync_cls, per_page=1000):
+    """
+    Добавляет в монгу инстансы модельки sync_cls._meta.model порциями
+    в per_page штук за раз
+    """
     model = sync_cls._meta.model
     document = sync_cls._meta.document
 
@@ -83,6 +99,7 @@ def do_bulk_insert_of_sync_cls(sync_cls, per_page=1000):
 
 
 def with_disabled_msync(f):
+    """Используется в тестах для отключения обновления монги sync классами"""
     @six.wraps(f)
     def wrapped(*args, **kwargs):
         with disabled_msync():
@@ -92,6 +109,7 @@ def with_disabled_msync(f):
 
 @contextmanager
 def disabled_msync():
+    """Используется в тестах для отключения обновления монги sync классами"""
     from .batches import BatchQuery, BatchTask
     old_bq, old_bt = BatchQuery.run, BatchTask.run
     new_run = lambda self: None
