@@ -3,7 +3,6 @@ from __future__ import unicode_literals
 import six
 from six.moves import reduce
 import logging
-import time
 import operator
 from collections import defaultdict
 from .queryset import QSPk
@@ -15,6 +14,13 @@ logger = logging.getLogger(__name__)
 
 
 class BatchQuery(object):
+    """
+    BatchQuery является контекстным менеджером и используется для
+    накопления запросов и их слияния, если это возможно.
+    Т.е. BatchQuery пытается сделать как можно меньше запросов к базе.
+    Запросы будут слиты, если аргументы к функции filter() у них одинаковы.
+    """
+
     def __init__(self, sync_cls):
         self._sync_cls = sync_cls
         self._qs_collection = defaultdict(list)
@@ -31,6 +37,15 @@ class BatchQuery(object):
         self.run()
 
     def run(self):
+        """
+        Почти все запросы, которые делает msync к монге, происходят здесь.
+        Единственные запросы, которые происходят в самих обработчиках
+        сигналов -- save() и delete().
+
+        Также функция пытается создать заново документ и сохранить его, если она не
+        смогла найти его в монге, когда обновляла соответствующий документ.
+        """
+
         for pk, qss in six.iteritems(self._qs_collection):
             qs = reduce(operator.or_, qss)
             qs_path = qs.get_path()
@@ -63,6 +78,12 @@ class BatchQuery(object):
 
 
 class BatchTask(object):
+    """
+    Является контекстным менеджером и занимается накоплением функций с
+    запросами к монге. Перед выходом из контекста создается таск,
+    где и выполняются эти функции.
+    """
+
     def __init__(self, sync_cls):
         self._sync_cls = sync_cls
         self._async_tasks = []
