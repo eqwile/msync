@@ -11,6 +11,9 @@ logger = logging.getLogger(__name__)
 
 
 class SignalConnector(object):
+    """
+    Класс отвечает за синхронизацию коллекций в монге с django-orm.
+    """
     def __init__(self, sync_cls):
         self.parent_sync_cls = sync_cls
         self.parent_meta = sync_cls._meta
@@ -27,6 +30,11 @@ class SignalConnector(object):
         return next((rel.field.rel.through for rel in rel_objects if rel.model == self.parent_meta.model), None)
 
     def setup(self):
+        """
+        Здесь происходит подключение сигналов моделек, определенных во вложенных и 
+        зависимых полях, и самой модельки sync_cls._meta.model. 
+        Подключаются post_save, post_delete и m2m_changed.
+        """
         for model in self.parent_meta.get_all_own_models():
             if model is None:
                 continue
@@ -46,6 +54,8 @@ class SignalConnector(object):
         dispatch_uid = '{}-{}-{}'.format(self.parent_sync_cls.__name__, model.__name__, handler.__name__)
         signal.connect(handler, sender=model, weak=False, dispatch_uid=dispatch_uid)
 
+    # В следующих трех функциях происходит определение логики ассинхроннсти
+    # для всех видов полей
     def _is_nested_sfield_async(self, sfield):
         if sfield.async is not None:
             return sfield.async
@@ -228,6 +238,7 @@ def m2m_post_clear(batch, parent_sync_cls=None, sfield=None, instance=None):
     batch[instance] = QSClear(sync_cls=parent_sync_cls, sfield=sfield, instance=instance)
 
 
+# хак для сериализации методов и функций, созданных динамически в этом модуле
 def _pickle_method(m):
     if m.im_self is None:
         return getattr, (m.im_class, m.im_func.func_name)
