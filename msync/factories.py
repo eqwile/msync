@@ -1,12 +1,16 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 from django.db import models
-from mongoengine import document, fields as mfields
+from mongoengine import fields as mfields
 from msync import fields as sfields
 from .utils import to_dict, DefaultQuerySet
 
 
 class DocumentSchemeFactory(object):
+    """
+    Занимается созданием документ классов для общения с монгой
+    при инициализации sync классов.
+    """
 
     def __init__(self, name, meta):
         self.name = name
@@ -48,7 +52,18 @@ class DocumentSchemeFactory(object):
         return self.meta._qs_managers
 
 
+# TODO: при создании mongoengine полей было бы неплохо
+# маппить параметры django-orm полей на mongoengine поля,
+# а не просто возвращать соответствующий класс.
+# Например: если models.IntegerField содержит help_text или
+# default, или null, или blank итд, то при создании mongoengine
+# поля в качестве аргументов соответствующих параметров
+# использовать значения из поля models.IntegerField.
 class DocumentFieldFactory(object):
+    """
+    Создает mongoengine поля из django-orm полей.
+    """
+
     field_mapping = {
         models.AutoField: mfields.IntField,
         models.FloatField: mfields.FloatField,
@@ -77,6 +92,8 @@ class DocumentFieldFactory(object):
 
 
 class SyncFieldFactory(object):
+    """Занимается созданием sync поля на основе django-orm поля, если возможно"""
+
     def __init__(self, sync_cls):
         self.mfield_factory = DocumentFieldFactory()
         self.sync_cls = sync_cls
@@ -94,6 +111,8 @@ class SyncFieldFactory(object):
 
 
 class DocumentFactory(object):
+    """Создает документы на основе инстансов моделек"""
+
     def __init__(self, sync_cls):
         self.sync_cls = sync_cls
         self.meta = sync_cls._meta
@@ -103,10 +122,15 @@ class DocumentFactory(object):
         return self.meta.document(**field_values)
 
     def bulk_create(self, instances):
+        """
+        Здесь происходит основная магия по добавлению в монгу инстансов
+        большими порциями. Алгоритм рекурсивный, поэтому я потихоньку
+        перестал понимать как это работает :)
+        """
         documents = {}
         if not instances:
             return documents
-        
+
         value_dicts = {sfield: sfield.values_from_source(instances) for sfield in self.meta.sfields}
         for instance in instances:
             field_values = {}
