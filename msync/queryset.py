@@ -5,6 +5,10 @@ from .factories import DocumentFactory
 
 
 class QSBase(object):
+    """
+    QS* классы занимаются построеним запросов разного рода.
+    Для лучшего их понимания можно обратиться к тестам за примерами использования
+    """
     delim = '__'
 
     def __init__(self, sync_cls=None, document=None, instance=None, sfield=None, path=None):
@@ -15,6 +19,7 @@ class QSBase(object):
         self._path = path
 
     def get_path(self):
+        """Строит запрос и возвращает его"""
         if self._path is None:
             self._path = self._get_path()
         return self._path
@@ -30,6 +35,7 @@ class QSBase(object):
         return self.union(other)
 
     def union(self, other):
+        """Занимается слиянием запросов"""
         path = self.get_path()
         other_path = other.get_path()
         path.update(other_path)
@@ -44,6 +50,11 @@ class QSBase(object):
 
 
 class QSPk(QSBase):
+    """
+    Строит запросы к primary полям.
+    Обычно используется для функции filter().
+    """
+
     def __init__(self, pk=None, **kwargs):
         self._pk = pk
         super(QSPk, self).__init__(**kwargs)
@@ -76,6 +87,8 @@ class QSPk(QSBase):
 
 
 class QSUpdate(QSBase):
+    """Занимается обновлением вложенных полей"""
+
     def _get_path(self):
         sfield_path = self._get_sfield_path()
         return self._build_path_of_simple_sfields(sfield_path)
@@ -91,6 +104,8 @@ class QSUpdate(QSBase):
 
 
 class QSUpdateParent(QSUpdate):
+    """Занимается обновлением полей модельки"""
+
     def _build_path_of_simple_sfields(self, sfield_path, op='set'):
         return {op + self.delim + sf.name: getattr(self._document, sf.name)
                 for sf in self._sync_cls._meta.get_simple_sfields()}
@@ -100,6 +115,8 @@ class QSUpdateParent(QSUpdate):
 
 
 class QSUpdateDependentField(QSBase):
+    """Занимается обновлением dependent полей"""
+
     def _get_path(self):
         field_values = self._get_field_values()
         sfield_path = self._get_sfield_path()
@@ -118,6 +135,8 @@ class QSUpdateDependentField(QSBase):
 
 
 class QSClear(QSUpdateDependentField):
+    """Обычно используется для очистки m2m поля"""
+
     def _get_field_values(self):
         return {self._sfield.name: []}
 
@@ -126,6 +145,8 @@ class QSClear(QSUpdateDependentField):
 
 
 class QSCreate(QSBase):
+    """Занимается созданием вложенных объектов"""
+
     def __init__(self, documents=None, **kwargs):
         super(QSCreate, self).__init__(**kwargs)
         self._documents = documents
@@ -150,6 +171,8 @@ class QSCreate(QSBase):
 
 
 class QSDelete(QSBase):
+    """Занимается удалением вложенных объектов"""
+
     def __init__(self, pk=None, pks=None, **kwargs):
         super(QSDelete, self).__init__(**kwargs)
         self._pk = pk
